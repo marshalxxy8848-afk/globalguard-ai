@@ -1,0 +1,21 @@
+{
+  "last_updated": "2026-05-12T00:00:00Z",
+  "section_321": {
+    "status": "under_review",
+    "effective_date": "2026-01-01",
+    "china_origin": true,
+    "de_minimis_threshold": 800,
+    "notes": "T86 de minimis exemption for Chinese-origin packages under review. Multiple bills proposed to lower or eliminate the $800 threshold."
+  },
+  "china_tariffs": {
+    "section_301_rate": 0.075,
+    "additional_rate": 0.25,
+    "de_minimis_revoked": false,
+    "notes": "301 tariffs remain in place. Proposed legislation may revoke de minimis for Chinese goods, imposing 30% ad valorem or $25/package flat rate."
+  },
+  "eu_tariffs": {
+    "ioss_vat": 0.20,
+    "de_minimis_threshold": 150,
+    "notes": "EU IOSS VAT applies to all imports ≤€150. No immediate changes expected."
+  }
+}
