@@ -225,6 +225,46 @@ function LoadingDots() {
   );
 }
 
+// Custom dropdown (fixes white popup on native select)
+function CustomSelect({ value, options, onChange, label }: {
+  value: string; options: { value: string; label: string }[]; onChange: (v: string) => void; label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+  const selected = options.find((o) => o.value === value);
+  return (
+    <div ref={ref} className="relative">
+      {label && <label className="text-[10px] text-white/30 block mb-1">{label}</label>}
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none flex items-center justify-between gap-2 cursor-pointer hover:border-white/20 transition-colors"
+      >
+        <span className={value ? 'text-white/60' : 'text-white/20'}>{selected?.label || label || '请选择'}</span>
+        <svg className={`w-3 h-3 text-white/30 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-white/10 bg-[#0d0d14] shadow-xl max-h-48 overflow-y-auto">
+          {options.map((opt) => (
+            <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${
+                opt.value === value ? 'text-cyan-300 bg-cyan-500/10' : 'text-white/50 hover:bg-white/[0.03] hover:text-white/70'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Icon({ type }: { type: 'compass' | 'shield' | 'mic' }) {
   const paths: Record<string, string> = {
     compass: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/><path d="M12 6v4m0 4v4"/>',
@@ -797,28 +837,18 @@ export default function Home() {
                 className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
               />
             </div>
-            <div>
-              <label className="text-[10px] text-white/30 block mb-1">原产国</label>
-              <select value={originCountry} onChange={(e) => setOriginCountry(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30 appearance-none cursor-pointer"
-              >
-                <option value="china">中国</option>
-                <option value="vietnam">越南</option>
-                <option value="thailand">泰国</option>
-                <option value="mexico">墨西哥</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] text-white/30 block mb-1">欧盟目的国（VAT）</label>
-              <select value={euCountry} onChange={(e) => setEuCountry(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30 appearance-none cursor-pointer"
-              >
-                <option value="">不指定（默认 20%）</option>
-                {Object.entries(EU_VAT_RATES).map(([code, { name, rate }]) => (
-                  <option key={code} value={code}>{name} ({(rate * 100).toFixed(1)}%)</option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect label="原产国" value={originCountry} options={[
+              { value: 'china', label: '中国' },
+              { value: 'vietnam', label: '越南' },
+              { value: 'thailand', label: '泰国' },
+              { value: 'mexico', label: '墨西哥' },
+            ]} onChange={setOriginCountry} />
+            <CustomSelect label="欧盟目的国（VAT）" value={euCountry} options={[
+              { value: '', label: '不指定（默认 20%）' },
+              ...Object.entries(EU_VAT_RATES).map(([code, { name, rate }]) => ({
+                value: code, label: `${name} (${(rate * 100).toFixed(1)}%)`,
+              })),
+            ]} onChange={setEuCountry} />
           </div>
         )}
 
