@@ -4,7 +4,7 @@ import { generateAuditReport } from '@/lib/audit';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productName, material, usage, hsCode, declaredValue, quantity } = body;
+    const { productName, material, usage, hsCode, declaredValue, quantity, originCountry, euCountry, platform, locale } = body;
 
     if (!productName || !hsCode) {
       return NextResponse.json(
@@ -18,8 +18,15 @@ export async function POST(request: NextRequest) {
       material || '',
       usage || '',
       hsCode,
+      undefined,
+      undefined,
       declaredValue || 50,
       quantity || 1,
+      originCountry || 'china',
+      euCountry || undefined,
+      undefined,
+      platform || 'none',
+      locale || 'zh-CN',
     );
 
     return NextResponse.json(report);

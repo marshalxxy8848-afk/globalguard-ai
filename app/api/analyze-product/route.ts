@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeImage } from '@/lib/ai';
 import { findByHsCode, searchWithFallback } from '@/lib/hs-codes';
+import { classifyProduct } from '@/lib/hs-classifier';
 import { generateAuditReport } from '@/lib/audit';
 import { getAuthUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
     let euCountry: string | undefined;
     let shippingEstimate: number | undefined;
     let platform: string = 'none';
+    let locale: string = 'zh-CN';
 
     const contentType = request.headers.get('content-type') || '';
 
@@ -28,6 +30,7 @@ export async function POST(request: NextRequest) {
       euCountry = body.euCountry || undefined;
       shippingEstimate = body.shippingEstimate ? Math.max(0, Math.min(999, Number(body.shippingEstimate))) : undefined;
       platform = body.platform || 'none';
+      locale = body.locale || 'zh-CN';
     } else if (contentType.includes('multipart/form-data')) {
       const form = await request.formData();
       const file = form.get('image') as File | null;
@@ -61,6 +64,15 @@ export async function POST(request: NextRequest) {
       visionResult.suggestedHsCodes.map((h) => h.code),
     );
 
+    // Run rule-based classification engine for confidence scoring
+    const classification = classifyProduct(
+      visionResult.productName,
+      visionResult.material,
+      visionResult.usage,
+      productDescription,
+      visionResult.suggestedHsCodes.map((h) => h.code),
+    );
+
     const enriched = visionResult.suggestedHsCodes.map((suggestion) => {
       const dbMatch = findByHsCode(suggestion.code);
       return dbMatch
@@ -82,6 +94,7 @@ export async function POST(request: NextRequest) {
       euCountry,
       shippingEstimate,
       platform,
+      locale as any,
     );
 
     // Auto-save to audit history if user is logged in
@@ -114,6 +127,7 @@ export async function POST(request: NextRequest) {
       demoMode: visionResult.demoMode,
       demoReason: visionResult.demoReason,
       audit,
+      hsClassification: classification,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
