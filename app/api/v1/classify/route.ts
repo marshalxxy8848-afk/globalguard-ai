@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     let euCountry: string | undefined;
     let shippingEstimate: number | undefined;
     let platform: string = 'none';
+    let locale: string = 'zh-CN';
 
     const contentType = request.headers.get('content-type') || '';
 
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
       euCountry = body.euCountry || undefined;
       shippingEstimate = body.shippingEstimate ? Math.max(0, Math.min(999, Number(body.shippingEstimate))) : undefined;
       platform = body.platform || 'none';
+      locale = body.locale || 'zh-CN';
     } else if (contentType.includes('multipart/form-data')) {
       const form = await request.formData();
       const file = form.get('image') as File | null;
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
       euCountry,
       shippingEstimate,
       platform,
+      locale as any,
     );
 
     return NextResponse.json({

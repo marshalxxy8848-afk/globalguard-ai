@@ -254,6 +254,7 @@ function CustomSelect({ value, options, onChange, label }: {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+  const { t } = useLocale();
   const selected = options.find((o) => o.value === value);
   return (
     <div ref={ref} className="relative">
@@ -261,7 +262,7 @@ function CustomSelect({ value, options, onChange, label }: {
       <button type="button" onClick={() => setOpen((v) => !v)}
         className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none flex items-center justify-between gap-2 cursor-pointer hover:border-white/20 transition-colors"
       >
-        <span className={value ? 'text-white/60' : 'text-white/20'}>{selected?.label || label || '请选择'}</span>
+        <span className={value ? 'text-white/60' : 'text-white/20'}>{selected?.label || label || t('select.placeholder')}</span>
         <svg className={`w-3 h-3 text-white/30 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -399,7 +400,7 @@ function HsCodeEditor({ code, suggestions, onChange }: {
         ))}
       </div>
       <div className="flex gap-2 items-center">
-        <input ref={inputRef} type="text" placeholder="手动输入 6 位 HS 编码"
+        <input ref={inputRef} type="text" placeholder={t('hseditor.placeholder')}
           value={manualCode} maxLength={6}
           onChange={(e) => setManualCode(e.target.value.replace(/\D/g, ''))}
           onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
@@ -408,10 +409,10 @@ function HsCodeEditor({ code, suggestions, onChange }: {
         <button onClick={handleManualSubmit} disabled={manualCode.length !== 6}
           className="px-3 py-1.5 rounded-lg text-xs bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cyan-500/20 transition-colors"
         >
-          确定
+          {t('hseditor.confirm')}
         </button>
         <button onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white/50 border border-transparent hover:border-white/10 transition-colors">
-          取消
+          {t('hseditor.cancel')}
         </button>
       </div>
     </div>
@@ -468,7 +469,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
               </svg>
             )}
             <h3 className="text-sm font-semibold text-white/80">
-              {report.profitRecommendation === 'recommended' ? '建议出单' : report.profitRecommendation === 'caution' ? '谨慎出单' : '不建议出单'}
+              {report.profitRecommendation === 'recommended' ? t('profit.recommended') : report.profitRecommendation === 'caution' ? t('profit.caution') : t('profit.not_recommended')}
             </h3>
           </div>
           <span className={`text-xs font-mono font-bold ${
@@ -479,11 +480,11 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
         </div>
         <div className="grid grid-cols-4 gap-3 text-xs mt-3">
           <div>
-            <p className="text-white/30">建议售价</p>
+            <p className="text-white/30">{t('profit.suggested_price')}</p>
             <p className="text-white/70 font-mono">${report.suggestedPrice.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-white/30">总成本（含关税）</p>
+            <p className="text-white/30">{t('profit.total_cost')}</p>
             <p className="text-white/70 font-mono">${(report.suggestedPrice - report.estimatedProfit - report.platform.totalFee).toFixed(2)}</p>
           </div>
           {report.platform.totalFee > 0 && (
@@ -493,7 +494,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
             </div>
           )}
           <div>
-            <p className="text-white/30">净利润</p>
+            <p className="text-white/30">{t('profit.net_profit')}</p>
             <p className={`font-mono ${report.estimatedProfit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               ${report.estimatedProfit.toFixed(2)}
             </p>
@@ -508,7 +509,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">{report.productName}</h2>
             {onToggleFav && (
-              <button onClick={onToggleFav} className="transition-colors" title={isFav ? '取消收藏' : '收藏'}>
+              <button onClick={onToggleFav} className="transition-colors" title={isFav ? t('fav.remove') : t('fav.add')}>
                 <svg className={`w-4 h-4 ${isFav ? 'text-amber-400' : 'text-white/20 hover:text-amber-400/50'}`} viewBox="0 0 24 24" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.5}>
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
@@ -532,7 +533,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
         <TariffCard label={t('report.us_tariff')} currency="$" amount={report.us.estimatedDuty}
           riskLevel={report.us.riskLevel} lines={[
             report.us.dutyRate,
-            report.us.section301Label !== '无 301 附加关税' ? report.us.section301Label : '',
+            report.us.section301Label,
             report.us.calculation,
             report.us.t86Impact,
           ].filter(Boolean)} />
@@ -545,23 +546,24 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
       {report.countryComparison && report.countryComparison.length > 0 && (
         <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
           <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
-            产地比价 — 推荐从 <span className="text-cyan-300">{report.bestOriginLabel}</span> 发货
+            {t('compare.title', { country: report.bestOriginLabel })}
           </h3>
           <div className="flex flex-wrap gap-2">
             {report.countryComparison.map((c) => {
               const isBest = c.country === report.bestOriginCountry;
               const isCurrent = c.country === 'china';
-              const diff = c.totalCost - (report.countryComparison.find((x) => x.country === report.bestOriginCountry)?.totalCost || 0);
+              const bestCost = report.countryComparison.find((x) => x.country === report.bestOriginCountry)?.totalCost || 0;
+              const diff = c.totalCost - bestCost;
               return (
                 <div key={c.country} className={`flex-1 min-w-[100px] p-3 rounded-lg border text-center ${
                   isBest ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/[0.03] border-white/10'
                 }`}>
                   <p className="text-xs font-medium text-white/60 mb-1">{c.label}</p>
                   <p className="text-sm font-mono font-bold text-white/80">${c.totalCost.toFixed(2)}</p>
-                  <p className="text-[10px] text-white/30">关税: ${c.duty.toFixed(2)}</p>
-                  {isBest && <p className="text-[10px] text-cyan-400 mt-1">最优</p>}
+                  <p className="text-[10px] text-white/30">{t('compare.duty', { amount: c.duty.toFixed(2) })}</p>
+                  {isBest && <p className="text-[10px] text-cyan-400 mt-1">{t('compare.best')}</p>}
                   {isCurrent && !isBest && (
-                    <p className="text-[10px] text-emerald-400 mt-1">比当前省 ${diff.toFixed(2)}</p>
+                    <p className="text-[10px] text-emerald-400 mt-1">{t('compare.savings', { amount: diff.toFixed(2) })}</p>
                   )}
                 </div>
               );
@@ -573,32 +575,32 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
       {/* Landed cost */}
       {report.landedCost && (
         <div className="p-5 rounded-xl bg-gradient-to-r from-cyan-500/5 to-blue-500/5 border border-cyan-500/15">
-          <h3 className="text-xs font-semibold text-cyan-300/80 uppercase tracking-wider mb-3">到门总成本（Landed Cost）</h3>
+          <h3 className="text-xs font-semibold text-cyan-300/80 uppercase tracking-wider mb-3">{t('landed.title')}</h3>
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <p className="text-white/30">货值</p>
+              <p className="text-white/30">{t('landed.value')}</p>
               <p className="text-white/70 font-mono">${report.landedCost.declaredValue.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-white/30">运费</p>
+              <p className="text-white/30">{t('landed.shipping')}</p>
               <p className="text-white/70 font-mono">${report.landedCost.shippingEstimate.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-white/30">关税总额</p>
+              <p className="text-white/30">{t('landed.total_duty')}</p>
               <p className="text-white/70 font-mono">${report.landedCost.totalDuty.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-white/30">EU VAT</p>
+              <p className="text-white/30">{t('landed.eu_vat')}</p>
               <p className="text-white/70 font-mono">€{report.landedCost.euVat.toFixed(2)}</p>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-cyan-500/10 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-[10px] text-cyan-300/50">到美国总成本</p>
+              <p className="text-[10px] text-cyan-300/50">{t('landed.to_us')}</p>
               <p className="text-sm font-bold text-cyan-300 font-mono">${report.landedCost.grandTotalUs.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-cyan-300/50">到欧盟总成本</p>
+              <p className="text-[10px] text-cyan-300/50">{t('landed.to_eu')}</p>
               <p className="text-sm font-bold text-cyan-300 font-mono">€{report.landedCost.grandTotalEu.toFixed(2)}</p>
             </div>
           </div>
@@ -608,9 +610,9 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
       {/* Suggested retail price */}
       {report.suggestedPrice > 0 && (
         <div className="p-5 rounded-xl bg-gradient-to-r from-emerald-500/5 to-teal-500/5 border border-emerald-500/15">
-          <h3 className="text-xs font-semibold text-emerald-300/80 uppercase tracking-wider mb-2">建议零售价</h3>
+          <h3 className="text-xs font-semibold text-emerald-300/80 uppercase tracking-wider mb-2">{t('retail.title')}</h3>
           <p className="text-2xl font-bold text-emerald-300 font-mono">${report.suggestedPrice.toFixed(2)}</p>
-          <p className="mt-1 text-[10px] text-emerald-300/50">基于成本、关税及市场溢价计算，仅供参考</p>
+          <p className="mt-1 text-[10px] text-emerald-300/50">{t('retail.disclaimer')}</p>
         </div>
       )}
 
@@ -635,7 +637,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
           )}
           <div>
             <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
-              {report.shipmentRecommended ? '建议直发' : '运输建议'}
+              {report.shipmentRecommended ? t('shipment.recommended') : t('shipment.advice')}
             </h3>
             <p className={`text-xs leading-relaxed ${report.shipmentRecommended ? 'text-green-300/70' : 'text-orange-300/70'}`}>
               {report.shipmentReason}
@@ -647,7 +649,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
       {/* Compliance flags */}
       {report.compliance && (
         <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
-          <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">合规检查</h3>
+          <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">{t('compliance.title')}</h3>
           <div className="flex flex-wrap gap-2">
             {[
               { flag: report.compliance.dangerous, label: report.compliance.dangerousLabel, color: 'red' },
@@ -674,7 +676,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                未检测到常见合规风险
+                {t('compliance.no_risks')}
               </p>
             )}
           </div>
@@ -689,13 +691,13 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
               <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             </svg>
             <div>
-              <h3 className="text-xs font-semibold text-amber-300 mb-1">中国海关监管条件</h3>
+              <h3 className="text-xs font-semibold text-amber-300 mb-1">{t('regulatory.title')}</h3>
               <div className="flex flex-wrap gap-1.5">
                 {report.conditions.split('').map((c) => {
                   const labels: Record<string, string> = {
-                    '1': '进口许可证', '4': '出口许可证', 'A': '进口检验检疫',
-                    'B': '出口检验检疫', 'O': '自动进口许可证', 'Y': '原产地证明',
-                    'P': '固体废物进口',
+                    '1': t('regulatory.condition_1'), '4': t('regulatory.condition_4'), 'A': t('regulatory.condition_A'),
+                    'B': t('regulatory.condition_B'), 'O': t('regulatory.condition_O'), 'Y': t('regulatory.condition_Y'),
+                    'P': t('regulatory.condition_P'),
                   };
                   return (
                     <span key={c} className="px-2 py-0.5 rounded bg-amber-500/10 text-[10px] text-amber-400 border border-amber-500/20" title={labels[c] || c}>
@@ -704,7 +706,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
                   );
                 })}
               </div>
-              <p className="mt-1.5 text-[10px] text-amber-300/50">出口前请确认具备相应资质或许可证</p>
+              <p className="mt-1.5 text-[10px] text-amber-300/50">{t('regulatory.disclaimer')}</p>
             </div>
           </div>
         </div>
@@ -719,7 +721,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
               <polyline points="17 6 23 6 23 12" />
             </svg>
             <div>
-              <span className="text-xs text-green-300/80">出口退税率</span>
+              <span className="text-xs text-green-300/80">{t('tax_rebate.label')}</span>
               <span className="ml-2 text-sm font-semibold text-green-300">{report.taxRebate}%</span>
             </div>
           </div>
@@ -740,7 +742,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
           <circle cx="12" cy="12" r="10" />
           <polyline points="12 6 12 12 16 14" />
         </svg>
-        数据来源：{report.dataSource} · 更新于 {report.dataUpdated}
+        {t('data.source', { source: report.dataSource, date: report.dataUpdated })}
       </div>
 
       {/* Download buttons */}
@@ -763,7 +765,7 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            下载商业发票
+            {t('invoice.download')}
           </button>
         )}
       </div>
@@ -1017,7 +1019,7 @@ export default function Home() {
       newCode,
       current.suggestedDeclaration,
       current.hsDescription,
-      declaredValue, 1, originCountry, euCountry || undefined, shippingCost, platform,
+      declaredValue, 1, originCountry, euCountry || undefined, shippingCost, platform, locale as any,
     );
     setReport(newReport);
     // Persist to localStorage if viewing history
@@ -1062,11 +1064,97 @@ export default function Home() {
         favorites={favorites}
       />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-10">
-        <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold gradient-text">{t('app.title')}</h1>
-          <p className="mt-2 text-sm text-white/40">{t('app.subtitle')}</p>
-        </div>
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-10">
+
+        {/* Hero Section */}
+        <section className="relative overflow-hidden rounded-2xl mb-12 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-purple-500/10 border border-white/5">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.15),transparent_50%)]" />
+          <div className="relative px-8 py-14 sm:px-14 sm:py-20 text-center">
+            <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] text-cyan-300/70 mb-5 font-medium tracking-wider uppercase">
+              {t('hero.badge')}
+            </span>
+            <h1 className="text-3xl sm:text-5xl font-bold leading-tight text-white/90 max-w-2xl mx-auto">
+              {t('hero.title')}
+            </h1>
+            <p className="mt-4 text-sm sm:text-base text-white/40 max-w-xl mx-auto leading-relaxed">
+              {t('hero.subtitle')}
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <button onClick={() => fileRef.current?.click()}
+                className="px-8 py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20">
+                {t('hero.cta')}
+              </button>
+            </div>
+            <div className="mt-10 flex items-center justify-center gap-8 text-xs">
+              <div className="text-center">
+                <p className="text-lg font-bold text-white/70">5000+</p>
+                <p className="text-white/30">{t('hero.stats_products')}</p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-center">
+                <p className="text-lg font-bold text-white/70">{t('hero.stats_accuracy')}</p>
+                <p className="text-white/30">GPT-4o · Claude</p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-center">
+                <p className="text-lg font-bold text-white/70">&lt;30s</p>
+                <p className="text-white/30">{t('hero.stats_seconds')}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works */}
+        <section className="mb-12">
+          <h2 className="text-center text-sm font-semibold text-white/40 uppercase tracking-wider mb-8">{t('how.title')}</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { icon: '📸', title: t('how.step1.title'), desc: t('how.step1.desc') },
+              { icon: '🤖', title: t('how.step2.title'), desc: t('how.step2.desc') },
+              { icon: '📊', title: t('how.step3.title'), desc: t('how.step3.desc') },
+            ].map((step, i) => (
+              <div key={i} className="p-6 rounded-xl bg-white/[0.02] border border-white/10 text-center hover:border-cyan-500/20 transition-colors group">
+                <span className="text-3xl mb-3 block">{step.icon}</span>
+                <h3 className="text-sm font-semibold text-white/70 mb-2">{step.title}</h3>
+                <p className="text-xs text-white/30 leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Feature Grid */}
+        <section className="mb-12">
+          <h2 className="text-center text-sm font-semibold text-white/40 uppercase tracking-wider mb-8">{t('feature.title')}</h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {[
+              { icon: '🔍', title: t('feature.hs.title'), desc: t('feature.hs.desc') },
+              { icon: '💰', title: t('feature.tariff.title'), desc: t('feature.tariff.desc') },
+              { icon: '📈', title: t('feature.profit.title'), desc: t('feature.profit.desc') },
+              { icon: '🛡️', title: t('feature.compliance.title'), desc: t('feature.compliance.desc') },
+            ].map((feat, i) => (
+              <div key={i} className="p-5 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-colors">
+                <span className="text-xl mb-2 block">{feat.icon}</span>
+                <h3 className="text-sm font-semibold text-white/70 mb-1">{feat.title}</h3>
+                <p className="text-xs text-white/30 leading-relaxed">{feat.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Platform Badges */}
+        <section className="mb-10 text-center">
+          <p className="text-[10px] text-white/30 uppercase tracking-wider mb-4">{t('platform.title')}</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {[
+              t('platform.temu'), t('platform.tiktok'), t('platform.amazon'),
+              t('platform.shopify'), t('platform.walmart'),
+            ].map((name) => (
+              <span key={name} className="px-4 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/40 hover:text-white/60 hover:border-white/20 transition-colors">
+                {name}
+              </span>
+            ))}
+          </div>
+        </section>
 
         {/* Trust badges */}
         <div className="flex items-center justify-center gap-6 mb-6 text-[10px]">
@@ -1074,32 +1162,32 @@ export default function Home() {
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
-            <span>数据来源: USITC · EU TARIC</span>
+            <span>{t('badge.data_source')}</span>
           </div>
           <div className="flex items-center gap-1.5 text-white/25">
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
               <polyline points="20 6 9 17 4 12"/>
             </svg>
-            <span>AI 识别 · 秒出结果</span>
+            <span>{t('badge.ai_powered')}</span>
           </div>
           <div className="flex items-center gap-1.5 text-white/25">
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            <span>数据库更新于 2026-05</span>
+            <span>{t('badge.updated', { date: '2026-05' })}</span>
           </div>
         </div>
 
         {/* Quick tools */}
         <div className="flex items-center justify-center gap-3 mb-6">
           <a href="/tools/hs-lookup" className="px-3 py-1.5 rounded-lg border border-white/10 text-[10px] text-white/30 hover:text-white/50 hover:border-white/20 transition-colors">
-            🔍 HS 编码查询
+            {t('tools.hs_lookup')}
           </a>
           <a href="/tools/duty-calculator" className="px-3 py-1.5 rounded-lg border border-white/10 text-[10px] text-white/30 hover:text-white/50 hover:border-white/20 transition-colors">
-            💰 关税计算器
+            {t('tools.duty_calc')}
           </a>
           <span className="text-[10px] text-white/15">|</span>
-          <span className="text-[10px] text-white/15">支持 Temu · TikTok Shop · Amazon FBA · 独立站</span>
+          <span className="text-[10px] text-white/15">{t('tools.platforms')}</span>
         </div>
 
         {/* Upload zone */}
@@ -1174,71 +1262,71 @@ export default function Home() {
                 className={`px-3 py-1.5 rounded-lg border text-[10px] transition-colors ${
                   declaredValue === 5 && shippingCost === 4 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
                 }`}>
-                📦 Temu 半托管
+                {t('scene.temu')}
               </button>
               <button type="button" onClick={() => { setDeclaredValue(15); setShippingCost(6); }}
                 className={`px-3 py-1.5 rounded-lg border text-[10px] transition-colors ${
                   declaredValue === 15 && shippingCost === 6 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
                 }`}>
-                🎵 TikTok Shop
+                {t('scene.tiktok')}
               </button>
               <button type="button" onClick={() => { setDeclaredValue(50); setShippingCost(10); }}
                 className={`px-3 py-1.5 rounded-lg border text-[10px] transition-colors ${
                   declaredValue === 50 && shippingCost === 10 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
                 }`}>
-                🌐 独立站直邮
+                {t('scene.d2c')}
               </button>
             </div>
             <div className="grid grid-cols-4 gap-3 items-end">
               <div>
-                <label className="text-[10px] text-white/30 block mb-1">货值 (USD)</label>
+                <label className="text-[10px] text-white/30 block mb-1">{t('form.declared_value')}</label>
                 <input type="number" min={1} max={9999} value={declaredValue}
                   onChange={(e) => setDeclaredValue(Math.max(1, Math.min(9999, Number(e.target.value) || 1)))}
                   className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-white/30 block mb-1">运费 (USD)</label>
+                <label className="text-[10px] text-white/30 block mb-1">{t('form.shipping')}</label>
                 <input type="number" min={0} max={999} value={shippingCost}
                   onChange={(e) => setShippingCost(Math.max(0, Math.min(999, Number(e.target.value) || 0)))}
                   className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
                 />
               </div>
-              <CustomSelect label="原产国" value={originCountry} options={[
-                { value: 'china', label: '中国' },
-                { value: 'vietnam', label: '越南' },
-                { value: 'thailand', label: '泰国' },
-                { value: 'mexico', label: '墨西哥' },
+              <CustomSelect label={t('form.origin')} value={originCountry} options={[
+                { value: 'china', label: t('country.china') },
+                { value: 'vietnam', label: t('country.vietnam') },
+                { value: 'thailand', label: t('country.thailand') },
+                { value: 'mexico', label: t('country.mexico') },
               ]} onChange={setOriginCountry} />
-              <CustomSelect label="欧盟目的国（VAT）" value={euCountry} options={[
-                { value: '', label: '不指定（默认 20%）' },
+              <CustomSelect label={t('form.eu_country')} value={euCountry} options={[
+                { value: '', label: t('form.eu_default') },
                 ...Object.entries(EU_VAT_RATES).map(([code, { name, rate }]) => ({
                   value: code, label: `${name} (${(rate * 100).toFixed(1)}%)`,
                 })),
               ]} onChange={setEuCountry} />
             </div>
             <div className="mt-3 grid grid-cols-4 gap-3 items-end">
-              <CustomSelect label="销售平台" value={platform} options={[
+              <CustomSelect label={t('form.platform')} value={platform} options={[
                 ...Object.entries(PLATFORM_FEES).map(([k, v]) => ({
-                  value: k, label: v.commissionRate > 0 ? `${v.label} (${(v.commissionRate * 100).toFixed(1)}%佣)` : v.label,
+                  value: k, label: v.commissionRate > 0 ? `${v.label} (${(v.commissionRate * 100).toFixed(1)}${t('form.commission_suffix')})` : v.label,
                 })),
               ]} onChange={setPlatform} />
               <div className="col-span-3">
-                <label className="text-[10px] text-white/30 block mb-1">商品链接（可选）</label>
+                <label className="text-[10px] text-white/30 block mb-1">{t('form.product_link')}</label>
                 <input
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="粘贴 1688 / Amazon / TikTok Shop 商品链接"
+                  placeholder={t('form.link_placeholder')}
                   className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30"
                 />
               </div>
             </div>
             <div className="mt-3">
-              <label className="text-[10px] text-white/30 block mb-1">产品描述（可选）</label>
+              <label className="text-[10px] text-white/30 block mb-1">{t('form.product_desc')}</label>
               <textarea
                 value={productDescription}
                 onChange={(e) => setProductDescription(e.target.value)}
-                placeholder="输入产品名称、材质、用途等描述信息，帮助 AI 更准确识别分类（例如：无线蓝牙耳机，塑料外壳，用于手机音频）"
+                placeholder={t('form.desc_placeholder')}
                 rows={2}
                 className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30 resize-none"
               />
@@ -1304,7 +1392,7 @@ export default function Home() {
         {/* Batch comparison view */}
         {batchStatus === 'done' && batchResults.length > 1 && (
           <div className="mt-6">
-            <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">批量结果对比</h3>
+            <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">{t('batch.compare_title')}</h3>
             <div className="overflow-x-auto -mx-4 px-4">
               <div className="flex gap-3 min-w-max pb-2">
                 {batchResults.map((r, i) => (
@@ -1320,11 +1408,11 @@ export default function Home() {
                         r.overallRisk === 'high' ? 'bg-red-500/15 text-red-400' :
                         r.overallRisk === 'medium' ? 'bg-amber-500/15 text-amber-400' :
                         'bg-green-500/15 text-green-400'
-                      }`}>{r.overallRisk === 'high' ? '高' : r.overallRisk === 'medium' ? '中' : '低'}</span>
+                      }`}>{r.overallRisk === 'high' ? t('batch.risk_high') : r.overallRisk === 'medium' ? t('batch.risk_medium') : t('batch.risk_low')}</span>
                     </div>
                     <div className="space-y-0.5 text-[10px] text-white/30">
                       <p>US: ${r.us.estimatedDuty.toFixed(2)}</p>
-                      <p>EU: €{r.eu.totalEu.toFixed(2)}</p>
+                      <p>EU: €${r.eu.totalEu.toFixed(2)}</p>
                     </div>
                   </button>
                 ))}
@@ -1369,35 +1457,34 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4 py-10">
           <div className="grid grid-cols-3 gap-8 text-xs">
             <div>
-              <h4 className="text-white/50 font-semibold mb-3">GlobalGuard AI</h4>
+              <h4 className="text-white/50 font-semibold mb-3">{t('footer.name')}</h4>
               <p className="text-white/20 leading-relaxed">
-                面向中国跨境卖家的 AI 关税决策助手。<br/>
-                拍照即出 HS 编码 + 关税 + 利润分析。
+                {t('footer.desc')}
               </p>
             </div>
             <div>
-              <h4 className="text-white/50 font-semibold mb-3">工具</h4>
+              <h4 className="text-white/50 font-semibold mb-3">{t('footer.tools')}</h4>
               <ul className="space-y-2">
-                <li><a href="/" className="text-white/30 hover:text-white/50 transition-colors">AI 拍照识别</a></li>
-                <li><a href="/tools/hs-lookup" className="text-white/30 hover:text-white/50 transition-colors">HS 编码查询</a></li>
-                <li><a href="/tools/duty-calculator" className="text-white/30 hover:text-white/50 transition-colors">关税计算器</a></li>
+                <li><a href="/" className="text-white/30 hover:text-white/50 transition-colors">{t('footer.ai_photo')}</a></li>
+                <li><a href="/tools/hs-lookup" className="text-white/30 hover:text-white/50 transition-colors">{t('footer.hs_lookup')}</a></li>
+                <li><a href="/tools/duty-calculator" className="text-white/30 hover:text-white/50 transition-colors">{t('footer.duty_calc')}</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white/50 font-semibold mb-3">数据来源</h4>
+              <h4 className="text-white/50 font-semibold mb-3">{t('footer.data_sources')}</h4>
               <ul className="space-y-1.5">
-                <li className="text-white/20">USITC HTS（美国关税）</li>
-                <li className="text-white/20">EU TARIC（欧盟关税）</li>
-                <li className="text-white/20">中国海关总署（监管条件）</li>
-                <li className="text-white/20">实时汇率 · 每日更新</li>
+                <li className="text-white/20">{t('footer.data_usitc')}</li>
+                <li className="text-white/20">{t('footer.data_taric')}</li>
+                <li className="text-white/20">{t('footer.data_china')}</li>
+                <li className="text-white/20">{t('footer.data_forex')}</li>
               </ul>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-white/5 text-center">
             <div className="flex items-center justify-center gap-4 text-[10px] text-white/20">
-              <span>本工具结果仅供参考，不构成法律建议</span>
+              <span>{t('footer.disclaimer')}</span>
               <span>·</span>
-              <span>最终归类以海关裁定为准</span>
+              <span>{t('footer.disclaimer2')}</span>
             </div>
           </div>
         </div>
