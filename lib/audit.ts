@@ -52,6 +52,13 @@ export interface AuditReport {
   suggestedPrice: number;
   shipmentRecommended: boolean;
   shipmentReason: string;
+  platform: {
+    name: string;
+    label: string;
+    commissionRate: number;
+    fulfillmentFee: number;
+    totalFee: number;
+  };
   overallRisk: 'low' | 'medium' | 'high';
   estimatedProfit: number;
   profitMargin: number;
@@ -76,6 +83,16 @@ const SHIPPING_ESTIMATES: Record<string, number> = {
   vietnam: 10,
   thailand: 12,
   mexico: 15,
+};
+
+// Platform fee rates (commission % + fulfillment fee $ per unit)
+export const PLATFORM_FEES: Record<string, { label: string; commissionRate: number; fulfillmentFee: number; description: string }> = {
+  none: { label: '不指定', commissionRate: 0, fulfillmentFee: 0, description: '' },
+  temu: { label: 'Temu 半托管', commissionRate: 0.05, fulfillmentFee: 0, description: '平台佣金 5%，卖家承担物流' },
+  tiktok: { label: 'TikTok Shop', commissionRate: 0.15, fulfillmentFee: 0, description: '平台佣金约 15%（含 affiliate）' },
+  amazon: { label: 'Amazon FBA', commissionRate: 0.15, fulfillmentFee: 5, description: '佣金 15% + FBA 配货费约 $5/件' },
+  shopify: { label: 'Shopify', commissionRate: 0.029, fulfillmentFee: 0.3, description: '支付手续费 2.9% + $0.30' },
+  walmart: { label: '沃尔玛 WFS', commissionRate: 0.15, fulfillmentFee: 4, description: '佣金约 15% + WFS 配货费约 $4/件' },
 };
 
 // Compliance checks based on HS category + description
@@ -133,6 +150,7 @@ export function generateAuditReport(
   originCountry: string = 'china',
   euCountry?: string,
   shippingEstimate?: number,
+  platform: string = 'none',
 ): AuditReport {
   const dbItem = findByHsCode(hsCode);
   const warnings: string[] = [];
@@ -239,8 +257,12 @@ export function generateAuditReport(
       ? '含电池/危险品，运输受限。需使用特定物流渠道并提供 MSDS/UN38.3 报告。'
       : '当前产地无额外关税运输限制，可直接发运。';
 
-  // Profit calculation
-  const estimatedProfit = Math.round((suggestedPrice - grandUs) * 100) / 100;
+  // Platform fee calculation
+  const pf = PLATFORM_FEES[platform] || PLATFORM_FEES.none;
+  const platformFee = Math.round((suggestedPrice * pf.commissionRate + pf.fulfillmentFee * quantity) * 100) / 100;
+
+  // Profit calculation (net of platform fees)
+  const estimatedProfit = Math.round((suggestedPrice - grandUs - platformFee) * 100) / 100;
   const profitMargin = suggestedPrice > 0 ? Math.round((estimatedProfit / suggestedPrice) * 1000) / 10 : 0;
   const profitRecommendation: 'recommended' | 'caution' | 'not_recommended' =
     profitMargin > 30 ? 'recommended' : profitMargin > 15 ? 'caution' : 'not_recommended';
@@ -311,6 +333,13 @@ export function generateAuditReport(
     suggestedPrice,
     shipmentRecommended,
     shipmentReason,
+    platform: {
+      name: platform,
+      label: pf.label,
+      commissionRate: pf.commissionRate,
+      fulfillmentFee: pf.fulfillmentFee,
+      totalFee: platformFee,
+    },
     overallRisk,
     estimatedProfit,
     profitMargin,

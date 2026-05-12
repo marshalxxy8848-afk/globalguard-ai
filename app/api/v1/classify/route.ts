@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     let originCountry = 'china';
     let euCountry: string | undefined;
     let shippingEstimate: number | undefined;
+    let platform: string = 'none';
 
     const contentType = request.headers.get('content-type') || '';
 
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
       originCountry = body.originCountry || 'china';
       euCountry = body.euCountry || undefined;
       shippingEstimate = body.shippingEstimate ? Math.max(0, Math.min(999, Number(body.shippingEstimate))) : undefined;
+      platform = body.platform || 'none';
     } else if (contentType.includes('multipart/form-data')) {
       const form = await request.formData();
       const file = form.get('image') as File | null;
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
       originCountry = (form.get('originCountry') as string) || 'china';
       euCountry = (form.get('euCountry') as string) || undefined;
       shippingEstimate = form.get('shippingEstimate') ? Math.max(0, Math.min(999, Number(form.get('shippingEstimate')))) : undefined;
+      platform = (form.get('platform') as string) || 'none';
     } else {
       return NextResponse.json({ error: 'Unsupported content type. Use application/json or multipart/form-data.' }, { status: 400, headers: corsHeaders() });
     }
@@ -108,6 +111,7 @@ export async function POST(request: NextRequest) {
       originCountry,
       euCountry,
       shippingEstimate,
+      platform,
     );
 
     return NextResponse.json({

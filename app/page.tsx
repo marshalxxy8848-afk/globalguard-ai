@@ -7,7 +7,7 @@ import HistorySidebar from '@/app/components/HistorySidebar';
 import { loadAudits, saveAudit, deleteAudit, clearAudits, toggleFavorite, getFavorites } from '@/lib/client-storage';
 import type { StoredAudit } from '@/lib/client-storage';
 import { useLocale } from '@/lib/i18n';
-import { generateAuditReport } from '@/lib/audit';
+import { generateAuditReport, PLATFORM_FEES } from '@/lib/audit';
 import { EU_VAT_RATES } from '@/lib/eu-vat';
 import { checkSensitiveItem } from '@/lib/sensitive-items';
 
@@ -38,6 +38,7 @@ interface AuditReport {
   suggestedPrice: number;
   shipmentRecommended: boolean;
   shipmentReason: string;
+  platform: { name: string; label: string; commissionRate: number; fulfillmentFee: number; totalFee: number };
   estimatedProfit: number;
   profitMargin: number;
   profitRecommendation: string;
@@ -476,18 +477,26 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
             {report.profitMargin > 0 ? '+' : ''}{report.profitMargin}%
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-3 text-xs mt-3">
+        <div className="grid grid-cols-4 gap-3 text-xs mt-3">
           <div>
             <p className="text-white/30">建议售价</p>
             <p className="text-white/70 font-mono">${report.suggestedPrice.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-white/30">总成本</p>
-            <p className="text-white/70 font-mono">${(report.suggestedPrice - report.estimatedProfit).toFixed(2)}</p>
+            <p className="text-white/30">总成本（含关税）</p>
+            <p className="text-white/70 font-mono">${(report.suggestedPrice - report.estimatedProfit - report.platform.totalFee).toFixed(2)}</p>
           </div>
+          {report.platform.totalFee > 0 && (
+            <div>
+              <p className="text-white/30">{report.platform.label}</p>
+              <p className="text-white/70 font-mono">-${report.platform.totalFee.toFixed(2)}</p>
+            </div>
+          )}
           <div>
-            <p className="text-white/30">预估利润</p>
-            <p className="text-white/70 font-mono">${report.estimatedProfit.toFixed(2)}</p>
+            <p className="text-white/30">净利润</p>
+            <p className={`font-mono ${report.estimatedProfit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              ${report.estimatedProfit.toFixed(2)}
+            </p>
           </div>
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-white/40">{report.profitReason}</p>
@@ -779,6 +788,7 @@ export default function Home() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [productDescription, setProductDescription] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [platform, setPlatform] = useState('none');
 
   // Batch state
   const [files, setFiles] = useState<File[]>([]);
@@ -950,7 +960,7 @@ export default function Home() {
     const combinedDesc = [linkUrl ? `链接: ${linkUrl}` : '', productDescription].filter(Boolean).join('\n');
     const res = await fetch(API_PATHS.analyze, {
       method: 'POST', headers: JSON_HEADERS,
-      body: JSON.stringify({ image: imageBase64, productDescription: combinedDesc || undefined, declaredValue, originCountry, euCountry: euCountry || undefined, shippingEstimate: shippingCost }),
+      body: JSON.stringify({ image: imageBase64, productDescription: combinedDesc || undefined, declaredValue, originCountry, euCountry: euCountry || undefined, shippingEstimate: shippingCost, platform }),
       signal,
     });
     if (!res.ok) throw new Error((await res.json()).error || t('error.analysis_failed'));
@@ -1007,7 +1017,7 @@ export default function Home() {
       newCode,
       current.suggestedDeclaration,
       current.hsDescription,
-      declaredValue, 1, originCountry, euCountry || undefined, shippingCost,
+      declaredValue, 1, originCountry, euCountry || undefined, shippingCost, platform,
     );
     setReport(newReport);
     // Persist to localStorage if viewing history
@@ -1056,6 +1066,40 @@ export default function Home() {
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold gradient-text">{t('app.title')}</h1>
           <p className="mt-2 text-sm text-white/40">{t('app.subtitle')}</p>
+        </div>
+
+        {/* Trust badges */}
+        <div className="flex items-center justify-center gap-6 mb-6 text-[10px]">
+          <div className="flex items-center gap-1.5 text-white/25">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>数据来源: USITC · EU TARIC</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-white/25">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>AI 识别 · 秒出结果</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-white/25">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>数据库更新于 2026-05</span>
+          </div>
+        </div>
+
+        {/* Quick tools */}
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <a href="/tools/hs-lookup" className="px-3 py-1.5 rounded-lg border border-white/10 text-[10px] text-white/30 hover:text-white/50 hover:border-white/20 transition-colors">
+            🔍 HS 编码查询
+          </a>
+          <a href="/tools/duty-calculator" className="px-3 py-1.5 rounded-lg border border-white/10 text-[10px] text-white/30 hover:text-white/50 hover:border-white/20 transition-colors">
+            💰 关税计算器
+          </a>
+          <span className="text-[10px] text-white/15">|</span>
+          <span className="text-[10px] text-white/15">支持 Temu · TikTok Shop · Amazon FBA · 独立站</span>
         </div>
 
         {/* Upload zone */}
@@ -1173,26 +1217,31 @@ export default function Home() {
                 })),
               ]} onChange={setEuCountry} />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-white/30 block mb-1">产品描述（可选）</label>
-                <textarea
-                  value={productDescription}
-                  onChange={(e) => setProductDescription(e.target.value)}
-                  placeholder="输入产品名称、材质、用途等描述信息，帮助 AI 更准确识别分类（例如：无线蓝牙耳机，塑料外壳，用于手机音频）"
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30 resize-none"
-                />
-              </div>
-              <div>
+            <div className="mt-3 grid grid-cols-4 gap-3 items-end">
+              <CustomSelect label="销售平台" value={platform} options={[
+                ...Object.entries(PLATFORM_FEES).map(([k, v]) => ({
+                  value: k, label: v.commissionRate > 0 ? `${v.label} (${(v.commissionRate * 100).toFixed(1)}%佣)` : v.label,
+                })),
+              ]} onChange={setPlatform} />
+              <div className="col-span-3">
                 <label className="text-[10px] text-white/30 block mb-1">商品链接（可选）</label>
                 <input
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="粘贴 1688 / Amazon / 商品链接"
+                  placeholder="粘贴 1688 / Amazon / TikTok Shop 商品链接"
                   className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30"
                 />
               </div>
+            </div>
+            <div className="mt-3">
+              <label className="text-[10px] text-white/30 block mb-1">产品描述（可选）</label>
+              <textarea
+                value={productDescription}
+                onChange={(e) => setProductDescription(e.target.value)}
+                placeholder="输入产品名称、材质、用途等描述信息，帮助 AI 更准确识别分类（例如：无线蓝牙耳机，塑料外壳，用于手机音频）"
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30 resize-none"
+              />
             </div>
           </>
         )}
@@ -1315,6 +1364,44 @@ export default function Home() {
           />
         )}
       </main>
+
+      <footer className="border-t border-white/5 mt-16">
+        <div className="max-w-4xl mx-auto px-4 py-10">
+          <div className="grid grid-cols-3 gap-8 text-xs">
+            <div>
+              <h4 className="text-white/50 font-semibold mb-3">GlobalGuard AI</h4>
+              <p className="text-white/20 leading-relaxed">
+                面向中国跨境卖家的 AI 关税决策助手。<br/>
+                拍照即出 HS 编码 + 关税 + 利润分析。
+              </p>
+            </div>
+            <div>
+              <h4 className="text-white/50 font-semibold mb-3">工具</h4>
+              <ul className="space-y-2">
+                <li><a href="/" className="text-white/30 hover:text-white/50 transition-colors">AI 拍照识别</a></li>
+                <li><a href="/tools/hs-lookup" className="text-white/30 hover:text-white/50 transition-colors">HS 编码查询</a></li>
+                <li><a href="/tools/duty-calculator" className="text-white/30 hover:text-white/50 transition-colors">关税计算器</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-white/50 font-semibold mb-3">数据来源</h4>
+              <ul className="space-y-1.5">
+                <li className="text-white/20">USITC HTS（美国关税）</li>
+                <li className="text-white/20">EU TARIC（欧盟关税）</li>
+                <li className="text-white/20">中国海关总署（监管条件）</li>
+                <li className="text-white/20">实时汇率 · 每日更新</li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-white/5 text-center">
+            <div className="flex items-center justify-center gap-4 text-[10px] text-white/20">
+              <span>本工具结果仅供参考，不构成法律建议</span>
+              <span>·</span>
+              <span>最终归类以海关裁定为准</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
