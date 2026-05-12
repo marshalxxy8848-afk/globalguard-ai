@@ -19,6 +19,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  touch-action: manipulation;
 }
 
 .gradient-text {

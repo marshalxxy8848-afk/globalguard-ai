@@ -149,10 +149,11 @@ async function callOpenAI(imageBase64: string, productDescription?: string): Pro
 
 async function callAnthropic(imageBase64: string, productDescription?: string): Promise<AIVisionResult | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-
   const baseUrl = process.env.ANTHROPIC_BASE_URL;
   const useRelay = !!baseUrl;
+
+  // In relay mode, the proxy handles auth — no API key needed
+  if (!apiKey && !useRelay) return null;
   const model = process.env.AI_MODEL || 'claude-sonnet-4-20250514';
 
   try {
@@ -160,27 +161,38 @@ async function callAnthropic(imageBase64: string, productDescription?: string): 
 
     if (useRelay) {
       // OpenAI-compatible relay format (e.g. api.claudecode.net.cn for China users)
-      const descText = productDescription ? `\nAdditional product info: ${productDescription}` : '';
-      const userText = `Classify this product for customs purposes.${descText}`;
       const url = baseUrl.replace(/\/$/, '') + '/chat/completions';
+
+      // Build text-only prompt with product description (relays rarely support vision)
+      const desc = productDescription || 'general consumer product';
+      const prompt = `Product description: "${desc}"
+
+You MUST return a valid JSON object. No markdown, no code fences, no explanation. Only the JSON object.
+
+{
+  "productName": "Chinese product name based on description",
+  "material": "likely materials in Chinese",
+  "usage": "function/use in Chinese",
+  "hsDescription": "HS code description in Chinese",
+  "suggestedDeclaration": "customs declaration in Chinese (max 120 chars)",
+  "suggestedHsCodes": [
+    {"code": "6-digit HS code", "reason": "classification reason in Chinese", "confidence": 0.0}
+  ]
+}`;
+
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        headers: { 'Content-Type': 'application/json', ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}) },
         body: JSON.stringify({
           model,
-          max_tokens: 500,
+          max_tokens: 800,
           messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: userText },
-                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-              ],
-            },
+            { role: 'system', content: 'You are a HS customs classification expert. Return ONLY valid JSON. No markdown. No explanation.' },
+            { role: 'user', content: prompt },
           ],
         }),
       });
+
       if (!res.ok) {
         console.warn(`[Anthropic/Relay] API error: ${res.status} ${await res.text()}`);
         return null;
@@ -191,6 +203,7 @@ async function callAnthropic(imageBase64: string, productDescription?: string): 
       // Native Anthropic format
       const descTextNative = productDescription ? `\nAdditional product info: ${productDescription}` : '';
       const userTextNative = `Classify this product for customs purposes.${descTextNative}`;
+      if (!apiKey) return null;
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -242,7 +255,7 @@ export async function analyzeImage(imageBase64: string, productDescription?: str
   // All providers failed or no keys configured — return mock with demo mode
   const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
-  const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
+  const hasAnthropic = !!process.env.ANTHROPIC_API_KEY || !!process.env.ANTHROPIC_BASE_URL;
 
   let reason: string;
   if (!hasAnthropic && !hasDeepSeek && !hasOpenAI) {

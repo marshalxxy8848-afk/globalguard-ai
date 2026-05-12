@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { db } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -9,19 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const records = await prisma.auditRecord.findMany({
-      where: { userId: payload.userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-      select: {
-        id: true,
-        productName: true,
-        hsCode: true,
-        riskLevel: true,
-        report: true,
-        createdAt: true,
-      },
-    });
+    const records = await db.findAuditsByUserId(payload.userId);
 
     return NextResponse.json({ records });
   } catch (error) {

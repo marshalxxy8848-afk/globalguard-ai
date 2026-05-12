@@ -4,8 +4,9 @@
     {
       "name": "dev",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev", "--port", "3456"],
-      "port": 3456
+      "runtimeArgs": ["next", "dev", "--port", "3456", "-H", "0.0.0.0"],
+      "port": 3456,
+      "cwd": "D:\\globalguard-ai"
     }
   ]
 }

@@ -44,3 +44,5 @@ next-env.d.ts
 
 # local dev database (SQLite — not used on Vercel/Postgres)
 dev.db
+
+certificates

@@ -2,6 +2,7 @@
 // Multi-country tariff rates with 6-digit → 4-digit → chapter-level fallback
 
 import { lookupHs6, lookupHs4, lookupHs4Rate } from './hs-tariff-data';
+import { getEuVatRate } from './eu-vat';
 
 /** Get the HS chapter prefix from a 6-digit HS code */
 function getHsChapter(hsCode: string): string {
@@ -46,6 +47,22 @@ export interface EuTariffResult {
   calculation: string;
   riskLevel: 'low' | 'medium' | 'high';
   matchLevel: '6-digit' | '4-digit' | 'chapter';
+}
+
+// === Runtime override cache (populated by tariff-updater API) ===
+const _overrideCache = new Map<string, { usRate: number; euRate: number; section301: number }>();
+
+/** Set a runtime override for an HS6 code (used by tariff-updater API) */
+export function setTariffOverride(code6: string, rates: { usRate: number; euRate: number; section301: number }) {
+  _overrideCache.set(code6, rates);
+}
+/** Remove a runtime override */
+export function clearTariffOverride(code6: string) {
+  _overrideCache.delete(code6);
+}
+/** Clear all runtime overrides */
+export function clearAllTariffOverrides() {
+  _overrideCache.clear();
 }
 
 // === US Tariff Database (chapter-level fallback) ===
@@ -184,29 +201,38 @@ export function lookupUsTariff(hsCode: string, originCountry: string, declaredVa
   let specificRate = 0;
   let rateNote = '';
 
-  // Level 1: Try 6-digit exact match
-  const entry6 = lookupHs6(code6);
-  if (entry6) {
-    baseRate = entry6.usRate;
-    section301Rate = isChina ? entry6.section301 : 0;
+  // Level 0: Check runtime override cache
+  const cached = _overrideCache.get(code6);
+  if (cached && cached.usRate >= 0) {
+    baseRate = cached.usRate;
+    section301Rate = isChina ? (cached.section301 >= 0 ? cached.section301 : 0) : 0;
     matchLevel = '6-digit';
-    rateNote = `6位编码 ${code6} 精确匹配`;
+    rateNote = `6位编码 ${code6} 缓存覆盖`;
   } else {
-    // Level 2: Try 4-digit heading match (use representative rate)
-    const entry4 = lookupHs4Rate(code4);
-    if (entry4) {
-      baseRate = entry4.usRate;
-      section301Rate = isChina ? entry4.section301 : 0;
-      matchLevel = '4-digit';
-      rateNote = `4位品目 ${code4} 品目匹配`;
+    // Level 1: Try 6-digit exact match
+    const entry6 = lookupHs6(code6);
+    if (entry6) {
+      baseRate = entry6.usRate;
+      section301Rate = isChina ? entry6.section301 : 0;
+      matchLevel = '6-digit';
+      rateNote = `6位编码 ${code6} 精确匹配`;
     } else {
-      // Level 3: Fall back to chapter-level
-      const chapterEntry = US_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
-      baseRate = chapterEntry?.rateGeneral ?? 0.03;
-      section301Rate = (isChina && chapterEntry?.section301) ? chapterEntry.section301 : 0;
-      specificRate = chapterEntry?.specific ?? 0;
-      matchLevel = 'chapter';
-      rateNote = `章节 ${chapter} 近似匹配`;
+      // Level 2: Try 4-digit heading match (use representative rate)
+      const entry4 = lookupHs4Rate(code4);
+      if (entry4) {
+        baseRate = entry4.usRate;
+        section301Rate = isChina ? entry4.section301 : 0;
+        matchLevel = '4-digit';
+        rateNote = `4位品目 ${code4} 品目匹配`;
+      } else {
+        // Level 3: Fall back to chapter-level
+        const chapterEntry = US_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
+        baseRate = chapterEntry?.rateGeneral ?? 0.03;
+        section301Rate = (isChina && chapterEntry?.section301) ? chapterEntry.section301 : 0;
+        specificRate = chapterEntry?.specific ?? 0;
+        matchLevel = 'chapter';
+        rateNote = `章节 ${chapter} 近似匹配`;
+      }
     }
   }
 
@@ -270,7 +296,6 @@ export function lookupUsTariff(hsCode: string, originCountry: string, declaredVa
  * 3. Fall back to chapter-level table
  */
 export function lookupEuTariff(hsCode: string, declaredValue: number, euCountry?: string, quantity: number = 1): EuTariffResult {
-  const { getEuVatRate } = require('./eu-vat');
   const chapter = getHsChapter(hsCode);
 
   const cleanCode = hsCode.replace(/\D/g, '').slice(0, 6);
@@ -280,22 +305,29 @@ export function lookupEuTariff(hsCode: string, declaredValue: number, euCountry?
   let matchLevel: '6-digit' | '4-digit' | 'chapter' = 'chapter';
   let dutyRate: number;
 
-  // Level 1: Try 6-digit exact match
-  const entry6 = lookupHs6(code6);
-  if (entry6) {
-    dutyRate = entry6.euRate;
+  // Level 0: Check runtime override cache
+  const cached = _overrideCache.get(code6);
+  if (cached && cached.euRate >= 0) {
+    dutyRate = cached.euRate;
     matchLevel = '6-digit';
   } else {
-    // Level 2: Try 4-digit heading match
-    const entry4 = lookupHs4Rate(code4);
-    if (entry4) {
-      dutyRate = entry4.euRate;
-      matchLevel = '4-digit';
+    // Level 1: Try 6-digit exact match
+    const entry6 = lookupHs6(code6);
+    if (entry6) {
+      dutyRate = entry6.euRate;
+      matchLevel = '6-digit';
     } else {
-      // Level 3: Fall back to chapter
-      const entry = EU_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
-      dutyRate = entry?.rate ?? 0.03;
-      matchLevel = 'chapter';
+      // Level 2: Try 4-digit heading match
+      const entry4 = lookupHs4Rate(code4);
+      if (entry4) {
+        dutyRate = entry4.euRate;
+        matchLevel = '4-digit';
+      } else {
+        // Level 3: Fall back to chapter
+        const entry = EU_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
+        dutyRate = entry?.rate ?? 0.03;
+        matchLevel = 'chapter';
+      }
     }
   }
 

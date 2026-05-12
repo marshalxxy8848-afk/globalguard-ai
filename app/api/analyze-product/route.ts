@@ -4,7 +4,7 @@ import { findByHsCode, searchWithFallback } from '@/lib/hs-codes';
 import { classifyProduct } from '@/lib/hs-classifier';
 import { generateAuditReport } from '@/lib/audit';
 import { getAuthUser } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { db } from '@/lib/db';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -101,14 +101,12 @@ export async function POST(request: NextRequest) {
     try {
       const user = await getAuthUser();
       if (user) {
-        await prisma.auditRecord.create({
-          data: {
-            userId: user.userId,
-            productName: audit.productName,
-            hsCode: audit.selectedHsCode,
-            riskLevel: audit.overallRisk,
-            report: JSON.stringify(audit),
-          },
+        await db.createAuditRecord({
+          userId: user.userId,
+          productName: audit.productName,
+          hsCode: audit.selectedHsCode,
+          riskLevel: audit.overallRisk,
+          report: JSON.stringify(audit),
         });
       }
     } catch (dbErr) {

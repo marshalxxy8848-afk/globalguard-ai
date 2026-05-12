@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-type Locale = 'zh-CN' | 'en-US' | 'ja-JP' | 'ko-KR';
+type Locale = 'zh-CN' | 'en-US' | 'ja-JP' | 'ko-KR' | 'vi-VN' | 'th-TH' | 'es-ES' | 'pt-PT' | 'fr-FR' | 'de-DE' | 'ru-RU' | 'id-ID' | 'ms-MY';
 type Dict = Record<string, string>;
 
 const ZH_CN: Dict = {
@@ -227,7 +227,15 @@ const ZH_CN: Dict = {
   'hero.cta': '开始免费使用',
   'hero.stats_products': '5000+ 商品类别',
   'hero.stats_accuracy': 'AI 智能识别',
+  'hero.stats_accuracy_sub': 'AI 驱动',
   'hero.stats_seconds': '秒出结果',
+
+  // Image picker
+  'picker.camera': '拍照',
+  'picker.camera_desc': '使用相机拍摄产品',
+  'picker.gallery': '从相册选择',
+  'picker.gallery_desc': '从手机相册选择图片',
+  'picker.cancel': '取消',
 
   // How It Works
   'how.title': '三步使用',
@@ -422,6 +430,14 @@ const EN_US: Dict = {
   'hero.stats_products': '5000+ Categories',
   'hero.stats_accuracy': 'AI Recognition',
   'hero.stats_seconds': 'Instant Results',
+  'hero.stats_accuracy_sub': 'AI Powered',
+
+  // Image picker
+  'picker.camera': 'Camera',
+  'picker.camera_desc': 'Take a photo of the product',
+  'picker.gallery': 'Gallery',
+  'picker.gallery_desc': 'Choose from photo library',
+  'picker.cancel': 'Cancel',
 
   // How It Works
   'how.title': 'How It Works',
@@ -615,6 +631,14 @@ const JA_JP: Dict = {
   'hero.stats_products': '5000+カテゴリ',
   'hero.stats_accuracy': 'AI認識',
   'hero.stats_seconds': '即時結果',
+  'hero.stats_accuracy_sub': 'AI駆動',
+
+  // Image picker
+  'picker.camera': '撮影',
+  'picker.camera_desc': 'カメラで製品を撮影',
+  'picker.gallery': 'アルバムから選択',
+  'picker.gallery_desc': 'アルバムから画像を選択',
+  'picker.cancel': 'キャンセル',
 
   // How It Works
   'how.title': '使い方',
@@ -808,6 +832,14 @@ const KO_KR: Dict = {
   'hero.stats_products': '5000+ 카테고리',
   'hero.stats_accuracy': 'AI 인식',
   'hero.stats_seconds': '즉시 결과',
+  'hero.stats_accuracy_sub': 'AI 구동',
+
+  // Image picker
+  'picker.camera': '촬영',
+  'picker.camera_desc': '카메라로 제품 촬영',
+  'picker.gallery': '앨범에서 선택',
+  'picker.gallery_desc': '앨범에서 이미지 선택',
+  'picker.cancel': '취소',
 
   // How It Works
   'how.title': '사용 방법',
@@ -840,11 +872,210 @@ const KO_KR: Dict = {
   'lang.switch': '언어',
 };
 
+// --- Minimal dictionaries for additional languages (fall back to EN for untranslated keys) ---
+const VI_VN: Dict = {
+  'app.title': 'Kiểm tra tuân thủ xuất nhập khẩu',
+  'hero.badge': 'Kiểm toán tuân thủ AI xuyên biên giới',
+  'hero.title': 'Ảnh → HS Code + Thuế + Phân tích lợi nhuận',
+  'hero.subtitle': 'Trợ lý quyết định thuế quan AI cho người bán xuyên biên giới — tải ảnh sản phẩm để phân tích HS, thuế, lợi nhuận & tuân thủ.',
+  'hero.cta': 'Dùng thử miễn phí',
+  'hero.stats_products': '5000+ Danh mục',
+  'hero.stats_accuracy': 'AI Nhận diện',
+  'hero.stats_accuracy_sub': 'AI hoạt động',
+  'hero.stats_seconds': 'Kết quả tức thì',
+  'picker.camera': 'Chụp ảnh',
+  'picker.camera_desc': 'Chụp ảnh sản phẩm bằng camera',
+  'picker.gallery': 'Chọn từ thư viện',
+  'picker.gallery_desc': 'Chọn ảnh từ thư viện',
+  'picker.cancel': 'Hủy',
+  'platform.temu': 'Temu',
+  'platform.tiktok': 'TikTok Shop',
+  'platform.amazon': 'Amazon FBA',
+  'platform.shopify': 'Shopify',
+  'platform.walmart': 'Walmart',
+  'nav.audit': 'Kiểm toán',
+  'nav.history': 'Lịch sử',
+  'nav.login': 'Đăng nhập',
+  'nav.signup': 'Đăng ký',
+  'nav.logout': 'Đăng xuất',
+};
+const TH_TH: Dict = {
+  'app.title': 'การตรวจสอบการปฏิบัติตามข้อกำหนดข้ามพรมแดน',
+  'hero.badge': 'การตรวจสอบการปฏิบัติตามข้อกำหนดด้วย AI',
+  'hero.title': 'ถ่ายรูป → HS Code + อากร + วิเคราะห์กำไร',
+  'hero.subtitle': 'ผู้ช่วยตัดสินใจด้านภาษีศุลกากรสำหรับผู้ค้าข้ามพรมแดน — อัปโหลดรูปสินค้าเพื่อวิเคราะห์ HS ภาษี กำไร และการปฏิบัติตามข้อกำหนด',
+  'hero.cta': 'เริ่มต้นฟรี',
+  'hero.stats_products': '5000+ หมวดหมู่',
+  'hero.stats_accuracy': 'AI รู้จำ',
+  'hero.stats_accuracy_sub': 'ขับเคลื่อนด้วย AI',
+  'hero.stats_seconds': 'ผลลัพธ์ทันที',
+  'picker.camera': 'ถ่ายรูป',
+  'picker.camera_desc': 'ถ่ายรูปสินค้าด้วยกล้อง',
+  'picker.gallery': 'เลือกจากอัลบั้ม',
+  'picker.gallery_desc': 'เลือกรูปจากอัลบั้ม',
+  'picker.cancel': 'ยกเลิก',
+  'platform.temu': 'Temu',
+  'platform.tiktok': 'TikTok Shop',
+  'platform.amazon': 'Amazon FBA',
+  'platform.shopify': 'Shopify',
+  'platform.walmart': 'Walmart',
+  'nav.audit': 'ตรวจสอบ',
+  'nav.history': 'ประวัติ',
+  'nav.login': 'เข้าสู่ระบบ',
+  'nav.signup': 'สมัครสมาชิก',
+  'nav.logout': 'ออกจากระบบ',
+};
+const ES_ES: Dict = {
+  'app.title': 'Auditoría de cumplimiento transfronterizo',
+  'hero.badge': 'Auditoría de cumplimiento AI transfronteriza',
+  'hero.title': 'Foto → Código HS + Arancel + Análisis de ganancias',
+  'hero.subtitle': 'Asistente de decisiones arancelarias para vendedores internacionales — suba fotos para clasificación HS, cálculo de aranceles y análisis de cumplimiento.',
+  'hero.cta': 'Prueba gratuita',
+  'hero.stats_products': '5000+ Categorías',
+  'hero.stats_accuracy': 'Reconocimiento AI',
+  'hero.stats_accuracy_sub': 'Impulsado por AI',
+  'hero.stats_seconds': 'Resultados instantáneos',
+  'picker.camera': 'Cámara',
+  'picker.camera_desc': 'Tomar foto del producto',
+  'picker.gallery': 'Galería',
+  'picker.gallery_desc': 'Seleccionar de la galería',
+  'picker.cancel': 'Cancelar',
+  'platform.temu': 'Temu',
+  'platform.tiktok': 'TikTok Shop',
+  'platform.amazon': 'Amazon FBA',
+  'platform.shopify': 'Shopify',
+  'platform.walmart': 'Walmart',
+  'nav.audit': 'Auditar',
+  'nav.history': 'Historial',
+  'nav.login': 'Iniciar sesión',
+  'nav.signup': 'Registrarse',
+  'nav.logout': 'Cerrar sesión',
+};
+const PT_PT: Dict = {
+  'app.title': 'Auditoria de conformidade transfronteiriça',
+  'hero.badge': 'Auditoria de conformidade AI transfronteiriça',
+  'hero.title': 'Foto → Código HS + Tarifa + Análise de lucro',
+  'hero.subtitle': 'Assistente de decisão tarifária para vendedores globais — envie fotos para classificação HS, cálculo de tarifas e análise de conformidade.',
+  'hero.cta': 'Teste grátis',
+  'hero.stats_products': '5000+ Categorias',
+  'hero.stats_accuracy': 'Reconhecimento AI',
+  'hero.stats_accuracy_sub': 'Movido a AI',
+  'hero.stats_seconds': 'Resultados instantâneos',
+  'picker.camera': 'Câmera',
+  'picker.camera_desc': 'Tirar foto do produto',
+  'picker.gallery': 'Galeria',
+  'picker.gallery_desc': 'Selecionar da galeria',
+  'picker.cancel': 'Cancelar',
+  'nav.audit': 'Auditar',
+  'nav.history': 'Histórico',
+  'nav.login': 'Entrar',
+  'nav.signup': 'Registrar',
+  'nav.logout': 'Sair',
+};
+const FR_FR: Dict = {
+  'app.title': 'Audit de conformité transfrontalière',
+  'hero.badge': 'Audit de conformité AI transfrontalier',
+  'hero.title': 'Photo → Code SH + Droits + Analyse des bénéfices',
+  'hero.subtitle': 'Assistant de décision tarifaire pour les vendeurs internationaux — téléchargez des photos pour la classification SH, le calcul des droits et l\'analyse de conformité.',
+  'hero.cta': 'Essai gratuit',
+  'hero.stats_products': '5000+ Catégories',
+  'hero.stats_accuracy': 'Reconnaissance AI',
+  'hero.stats_accuracy_sub': 'Propulsé par AI',
+  'hero.stats_seconds': 'Résultats instantanés',
+  'picker.camera': 'Appareil photo',
+  'picker.camera_desc': 'Prendre une photo du produit',
+  'picker.gallery': 'Galerie',
+  'picker.gallery_desc': 'Choisir depuis la galerie',
+  'picker.cancel': 'Annuler',
+  'nav.audit': 'Auditer',
+  'nav.history': 'Historique',
+  'nav.login': 'Connexion',
+  'nav.signup': 'S\'inscrire',
+  'nav.logout': 'Déconnexion',
+};
+const DE_DE: Dict = {
+  'app.title': 'Grenzüberschreitende Compliance-Prüfung',
+  'hero.badge': 'AI-gestützte Compliance-Prüfung',
+  'hero.title': 'Foto → HS-Code + Zoll + Gewinnanalyse',
+  'hero.subtitle': 'KI-Zollentscheidungsassistent für internationale Verkäufer — laden Sie Produktfotos hoch für HS-Klassifikation, Zollberechnung und Compliance-Analyse.',
+  'hero.cta': 'Kostenlos starten',
+  'hero.stats_products': '5000+ Kategorien',
+  'hero.stats_accuracy': 'KI-Erkennung',
+  'hero.stats_accuracy_sub': 'KI-gestützt',
+  'hero.stats_seconds': 'Sofortige Ergebnisse',
+  'picker.camera': 'Kamera',
+  'picker.camera_desc': 'Produkt fotografieren',
+  'picker.gallery': 'Galerie',
+  'picker.gallery_desc': 'Aus Galerie auswählen',
+  'picker.cancel': 'Abbrechen',
+  'nav.audit': 'Prüfen',
+  'nav.history': 'Verlauf',
+  'nav.login': 'Anmelden',
+  'nav.signup': 'Registrieren',
+  'nav.logout': 'Abmelden',
+};
+const RU_RU: Dict = {
+  'app.title': 'Проверка соответствия трансграничной торговли',
+  'hero.badge': 'AI-аудит соответствия',
+  'hero.title': 'Фото → Код ТН ВЭД + Пошлина + Анализ прибыли',
+  'hero.subtitle': 'Помощник по тарифным решениям для跨国 продавцов — загрузите фото для классификации ТН ВЭД, расчета пошлин и проверки соответствия.',
+  'hero.cta': 'Начать бесплатно',
+  'hero.stats_products': '5000+ Категорий',
+  'hero.stats_accuracy': 'AI Распознавание',
+  'hero.stats_accuracy_sub': 'На базе AI',
+  'hero.stats_seconds': 'Мгновенные результаты',
+  'picker.camera': 'Камера',
+  'picker.camera_desc': 'Сфотографировать товар',
+  'picker.gallery': 'Галерея',
+  'picker.gallery_desc': 'Выбрать из галереи',
+  'picker.cancel': 'Отмена',
+  'nav.audit': 'Аудит',
+  'nav.history': 'История',
+  'nav.login': 'Войти',
+  'nav.signup': 'Регистрация',
+  'nav.logout': 'Выйти',
+};
+const ID_ID: Dict = {
+  'hero.cta': 'Mulai Gratis',
+  'hero.stats_accuracy': 'AI Pengenalan',
+  'picker.camera': 'Kamera',
+  'picker.camera_desc': 'Ambil foto produk',
+  'picker.gallery': 'Galeri',
+  'picker.gallery_desc': 'Pilih dari galeri',
+  'picker.cancel': 'Batal',
+  'nav.audit': 'Audit',
+  'nav.login': 'Masuk',
+  'nav.signup': 'Daftar',
+  'nav.logout': 'Keluar',
+};
+const MS_MY: Dict = {
+  'hero.cta': 'Mula Percuma',
+  'hero.stats_accuracy': 'AI Pengecaman',
+  'picker.camera': 'Kamera',
+  'picker.camera_desc': 'Ambil gambar produk',
+  'picker.gallery': 'Galeri',
+  'picker.gallery_desc': 'Pilih dari galeri',
+  'picker.cancel': 'Batal',
+  'nav.audit': 'Audit',
+  'nav.login': 'Log Masuk',
+  'nav.signup': 'Daftar',
+  'nav.logout': 'Log Keluar',
+};
+
 const DICTS: Record<Locale, Dict> = {
   'zh-CN': ZH_CN,
   'en-US': EN_US,
   'ja-JP': JA_JP,
   'ko-KR': KO_KR,
+  'vi-VN': VI_VN,
+  'th-TH': TH_TH,
+  'es-ES': ES_ES,
+  'pt-PT': PT_PT,
+  'fr-FR': FR_FR,
+  'de-DE': DE_DE,
+  'ru-RU': RU_RU,
+  'id-ID': ID_ID,
+  'ms-MY': MS_MY,
 };
 
 const STORAGE_KEY = 'globalguard_locale';
@@ -872,7 +1103,7 @@ interface LocaleContextValue {
   t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
-const LOCALE_VALUES: Locale[] = ['zh-CN', 'en-US', 'ja-JP', 'ko-KR'];
+const LOCALE_VALUES: Locale[] = ['zh-CN', 'en-US', 'ja-JP', 'ko-KR', 'vi-VN', 'th-TH', 'es-ES', 'pt-PT', 'fr-FR', 'de-DE', 'ru-RU', 'id-ID', 'ms-MY'];
 
 const LocaleCtx = createContext<LocaleContextValue>({
   locale: 'zh-CN',
