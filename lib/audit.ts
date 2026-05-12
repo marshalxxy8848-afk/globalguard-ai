@@ -12,6 +12,8 @@ export interface AuditReport {
     dutyRate: string;
     calculation: string;
     t86Impact: string;
+    section301: number;
+    section301Label: string;
     riskLevel: 'low' | 'medium' | 'high';
   };
   eu: {
@@ -22,20 +24,92 @@ export interface AuditReport {
     vatRate: number;
     riskLevel: 'low' | 'medium' | 'high';
   };
+  landedCost: {
+    declaredValue: number;
+    shippingEstimate: number;
+    usDuty: number;
+    euDuty: number;
+    euVat: number;
+    totalDuty: number;
+    grandTotalUs: number;
+    grandTotalEu: number;
+  };
+  compliance: {
+    dangerous: boolean;
+    dangerousLabel: string;
+    fda: boolean;
+    fdaLabel: string;
+    ce: boolean;
+    ceLabel: string;
+    battery: boolean;
+    batteryLabel: string;
+    ipRisk: boolean;
+    ipRiskLabel: string;
+  };
   restricted: boolean;
-  conditions: string;       // 监管条件代码
-  taxRebate: number | null; // 出口退税率百分比
+  conditions: string;
+  taxRebate: number | null;
   overallRisk: 'low' | 'medium' | 'high';
   suggestedDeclaration: string;
-  dataSource: string;       // 数据来源
-  dataUpdated: string;      // 数据更新日期
+  dataSource: string;
+  dataUpdated: string;
   warnings: string[];
 }
 
 // US tariff assumptions (post-T86 scenario)
-const US_FLAT_RATE = 25;       // $25/package
-const US_AD_VALOREM = 0.30;    // 30% ad valorem
-// EU VAT rate is now dynamic per country via getEuVatRate()
+const US_FLAT_RATE = 25;
+const US_AD_VALOREM = 0.30;
+
+// Estimated shipping cost by origin ($/kg typical)
+const SHIPPING_ESTIMATES: Record<string, number> = {
+  china: 8,
+  vietnam: 10,
+  thailand: 12,
+  mexico: 15,
+};
+
+// Compliance checks based on HS category + description
+function checkCompliance(item: CategoryItem | undefined, material: string, usage: string): AuditReport['compliance'] {
+  const cat = item?.category ?? '';
+  const desc = (item?.description ?? '').toLowerCase() + ' ' + material.toLowerCase() + ' ' + usage.toLowerCase();
+  const defaultResult = { dangerous: false, dangerousLabel: '', fda: false, fdaLabel: '', ce: false, ceLabel: '', battery: false, batteryLabel: '', ipRisk: false, ipRiskLabel: '' };
+
+  if (!item) return defaultResult;
+
+  const result = { ...defaultResult };
+
+  // Dangerous goods: chemicals, pesticides, solvents
+  if (cat === 'chemicals' || desc.includes('杀虫') || desc.includes('溶剂') || desc.includes('flammable') || desc.includes('气溶胶')) {
+    result.dangerous = true;
+    result.dangerousLabel = '危险品 — 运输受限，需提供 MSDS';
+  }
+
+  // FDA: food, cosmetics, certain chemicals
+  if (cat === 'food' || cat === 'beauty' || (cat === 'chemicals' && (desc.includes('护肤') || desc.includes('清洁')))) {
+    result.fda = true;
+    result.fdaLabel = 'FDA 监管 — 进口美国需 FDA 注册';
+  }
+
+  // CE: electronics, toys (EU mandatory)
+  if (cat === 'electronics' || cat === 'toys' || cat === 'machinery') {
+    result.ce = true;
+    result.ceLabel = 'CE 认证 — 出口欧盟需 CE 标志';
+  }
+
+  // Battery risk: common in electronics
+  if (desc.includes('蓝牙') || desc.includes('无线') || desc.includes('电动') || desc.includes('电池') || desc.includes('可充电') || item.hs_code.startsWith('8517') || item.hs_code.startsWith('852')) {
+    result.battery = true;
+    result.batteryLabel = '含电池 — 需 UN38.3 测试，IATA 运输限制';
+  }
+
+  // IP risk: toys, footwear, bags, watches, branded goods
+  if (cat === 'toys' || cat === 'footwear' || item.hs_code.startsWith('4202') || item.hs_code.startsWith('9102') || item.hs_code.startsWith('9504')) {
+    result.ipRisk = true;
+    result.ipRiskLabel = '侵权风险高 — 确认品牌/外观专利/商标合规';
+  }
+
+  return result;
+}
 
 export function generateAuditReport(
   productName: string,
@@ -48,17 +122,23 @@ export function generateAuditReport(
   quantity: number = 1,
   originCountry: string = 'china',
   euCountry?: string,
+  shippingEstimate?: number,
 ): AuditReport {
   const dbItem = findByHsCode(hsCode);
   const warnings: string[] = [];
 
+  // Section 301 tariff
+  const section301rate = dbItem?.section_301_tariff ?? 0;
+  const section301Amount = declaredValue * quantity * section301rate;
+
   // US duty calculation
   const usAdValorem = declaredValue * quantity * US_AD_VALOREM;
   const usFlatRate = US_FLAT_RATE * quantity;
-  const usDuty = Math.max(usAdValorem, usFlatRate);
+  const usBaseDuty = Math.max(usAdValorem, usFlatRate);
+  const usDuty = usBaseDuty + section301Amount;
   const usDutySource = usAdValorem >= usFlatRate ? '30% 从价税' : '$25 固定费率';
 
-  // T86 impact assessment (China-specific policy)
+  // T86 impact assessment
   const isChina = originCountry === 'china';
   const t86Impact =
     usDuty > 0
@@ -85,6 +165,9 @@ export function generateAuditReport(
   if (totalEu > 30) euRisk = 'high';
   else if (totalEu > 15) euRisk = 'medium';
 
+  // Compliance check
+  const compliance = checkCompliance(dbItem, material, usage);
+
   // Restricted item check
   const restricted = dbItem?.restricted || false;
   if (restricted) {
@@ -100,7 +183,17 @@ export function generateAuditReport(
     warnings.push('高关税风险 — 建议优化 HS 编码选择或考虑产地策略。');
   }
 
-  // Suggested declaration description (use AI Chinese value when available)
+  // Compliance warnings
+  if (compliance.dangerous) warnings.push(compliance.dangerousLabel);
+  if (compliance.battery) warnings.push(compliance.batteryLabel);
+  if (compliance.ipRisk) warnings.push(compliance.ipRiskLabel);
+
+  // Section 301 warning
+  if (section301rate > 0) {
+    warnings.push(`Section 301 附加关税：${(section301rate * 100).toFixed(1)}% — 适用于中国原产商品。`);
+  }
+
+  // Suggested declaration description
   const suggestedDeclaration = aiDeclaration ?? [
     productName,
     material ? `由${material}制成` : '',
@@ -110,10 +203,17 @@ export function generateAuditReport(
     .join('，')
     .slice(0, 120);
 
-  // Conditional warnings for regulatory conditions
+  // Regulatory conditions warning
   if (dbItem?.conditions) {
     warnings.push(`监管条件：${dbItem.conditions} — 请确认出口资质。`);
   }
+
+  // Landed cost
+  const shipping = shippingEstimate ?? SHIPPING_ESTIMATES[originCountry] ?? 10;
+  const totalDutyUs = Math.round((usDuty + euDuty) * 100) / 100;
+  const totalDutyEu = Math.round((euDuty + usDuty) * 100) / 100;
+  const grandUs = Math.round((declaredValue * quantity + shipping + usDuty + euVat) * 100) / 100;
+  const grandEu = Math.round((declaredValue * quantity + shipping + euDuty + euVat) * 100) / 100;
 
   return {
     productName,
@@ -126,6 +226,8 @@ export function generateAuditReport(
       dutyRate: `${(US_AD_VALOREM * 100).toFixed(0)}% or $${US_FLAT_RATE}/pc`,
       calculation: `$${declaredValue} × ${US_AD_VALOREM * 100}% = $${usAdValorem.toFixed(2)}，对比 $${US_FLAT_RATE}/件固定费率 → 采用${usDutySource}`,
       t86Impact,
+      section301: Math.round(section301Amount * 100) / 100,
+      section301Label: section301rate > 0 ? `含 ${(section301rate * 100).toFixed(1)}% 301 附加关税` : '无 301 附加关税',
       riskLevel: usRisk,
     },
     eu: {
@@ -136,6 +238,17 @@ export function generateAuditReport(
       vatRate: Math.round(euVatRate * 100 * 10) / 10,
       riskLevel: euRisk,
     },
+    landedCost: {
+      declaredValue,
+      shippingEstimate: shipping,
+      usDuty: Math.round(usDuty * 100) / 100,
+      euDuty: Math.round(euDuty * 100) / 100,
+      euVat: Math.round(euVat * 100) / 100,
+      totalDuty: totalDutyUs,
+      grandTotalUs: grandUs,
+      grandTotalEu: grandEu,
+    },
+    compliance,
     restricted,
     conditions: dbItem?.conditions ?? '',
     taxRebate: dbItem?.tax_rebate ?? null,

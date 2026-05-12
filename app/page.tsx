@@ -27,8 +27,10 @@ interface AuditReport {
   usage?: string;
   selectedHsCode: string;
   hsDescription: string;
-  us: { estimatedDuty: number; dutyRate: string; calculation: string; t86Impact: string; riskLevel: RiskLevel };
+  us: { estimatedDuty: number; dutyRate: string; calculation: string; t86Impact: string; section301: number; section301Label: string; riskLevel: RiskLevel };
   eu: { estimatedDuty: number; estimatedVat: number; totalEu: number; dutyRate: string; vatRate: number; riskLevel: RiskLevel };
+  landedCost: { declaredValue: number; shippingEstimate: number; usDuty: number; euDuty: number; euVat: number; totalDuty: number; grandTotalUs: number; grandTotalEu: number };
+  compliance: { dangerous: boolean; dangerousLabel: string; fda: boolean; fdaLabel: string; ce: boolean; ceLabel: string; battery: boolean; batteryLabel: string; ipRisk: boolean; ipRiskLabel: string };
   restricted: boolean;
   conditions: string;
   taxRebate: number | null;
@@ -458,11 +460,88 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
       {/* Tariff cards */}
       <div className="grid sm:grid-cols-2 gap-4">
         <TariffCard label={t('report.us_tariff')} currency="$" amount={report.us.estimatedDuty}
-          riskLevel={report.us.riskLevel} lines={[report.us.dutyRate, report.us.calculation, report.us.t86Impact]} />
+          riskLevel={report.us.riskLevel} lines={[
+            report.us.dutyRate,
+            report.us.section301Label !== '无 301 附加关税' ? report.us.section301Label : '',
+            report.us.calculation,
+            report.us.t86Impact,
+          ].filter(Boolean)} />
         <TariffCard label={t('report.eu_tariff')} currency="€" amount={report.eu.totalEu}
           riskLevel={report.eu.riskLevel} lines={[`${t('pdf.rate')} ${report.eu.dutyRate} + VAT ${report.eu.vatRate}%`,
             `${t('pdf.estimated_duty')}: €${report.eu.estimatedDuty.toFixed(2)} | ${t('pdf.estimated_vat')}: €${report.eu.estimatedVat.toFixed(2)}`]} />
       </div>
+
+      {/* Landed cost */}
+      {report.landedCost && (
+        <div className="p-5 rounded-xl bg-gradient-to-r from-cyan-500/5 to-blue-500/5 border border-cyan-500/15">
+          <h3 className="text-xs font-semibold text-cyan-300/80 uppercase tracking-wider mb-3">到门总成本（Landed Cost）</h3>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <p className="text-white/30">货值</p>
+              <p className="text-white/70 font-mono">${report.landedCost.declaredValue.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-white/30">运费</p>
+              <p className="text-white/70 font-mono">${report.landedCost.shippingEstimate.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-white/30">关税总额</p>
+              <p className="text-white/70 font-mono">${report.landedCost.totalDuty.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-white/30">EU VAT</p>
+              <p className="text-white/70 font-mono">€{report.landedCost.euVat.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-cyan-500/10 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[10px] text-cyan-300/50">到美国总成本</p>
+              <p className="text-sm font-bold text-cyan-300 font-mono">${report.landedCost.grandTotalUs.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-cyan-300/50">到欧盟总成本</p>
+              <p className="text-sm font-bold text-cyan-300 font-mono">€{report.landedCost.grandTotalEu.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Compliance flags */}
+      {report.compliance && (
+        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
+          <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">合规检查</h3>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { flag: report.compliance.dangerous, label: report.compliance.dangerousLabel, color: 'red' },
+              { flag: report.compliance.fda, label: report.compliance.fdaLabel, color: 'amber' },
+              { flag: report.compliance.ce, label: report.compliance.ceLabel, color: 'blue' },
+              { flag: report.compliance.battery, label: report.compliance.batteryLabel, color: 'orange' },
+              { flag: report.compliance.ipRisk, label: report.compliance.ipRiskLabel, color: 'purple' },
+            ].filter((c) => c.flag).map((c, i) => {
+              const colors: Record<string, string> = {
+                red: 'bg-red-500/10 border-red-500/20 text-red-300',
+                amber: 'bg-amber-500/10 border-amber-500/20 text-amber-300',
+                blue: 'bg-blue-500/10 border-blue-500/20 text-blue-300',
+                orange: 'bg-orange-500/10 border-orange-500/20 text-orange-300',
+                purple: 'bg-purple-500/10 border-purple-500/20 text-purple-300',
+              };
+              return (
+                <span key={i} className={`px-2.5 py-1 rounded-lg border text-[10px] ${colors[c.color]}`}>
+                  ⚠ {c.label}
+                </span>
+              );
+            })}
+            {!report.compliance.dangerous && !report.compliance.fda && !report.compliance.ce && !report.compliance.battery && !report.compliance.ipRisk && (
+              <p className="text-xs text-green-400/60 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                未检测到常见合规风险
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Regulatory conditions */}
       {report.conditions && report.conditions.length > 0 && (
@@ -567,6 +646,7 @@ export default function Home() {
   const [declaredValue, setDeclaredValue] = useState(50);
   const [originCountry, setOriginCountry] = useState('china');
   const [euCountry, setEuCountry] = useState('');
+  const [shippingCost, setShippingCost] = useState(10);
   const [favorites, setFavorites] = useState<string[]>([]);
 
   // Batch state
@@ -714,7 +794,7 @@ export default function Home() {
   async function callApi(imageBase64: string, signal?: AbortSignal) {
     const res = await fetch(API_PATHS.analyze, {
       method: 'POST', headers: JSON_HEADERS,
-      body: JSON.stringify({ image: imageBase64, declaredValue, originCountry, euCountry: euCountry || undefined }),
+      body: JSON.stringify({ image: imageBase64, declaredValue, originCountry, euCountry: euCountry || undefined, shippingEstimate: shippingCost }),
       signal,
     });
     if (!res.ok) throw new Error((await res.json()).error || t('error.analysis_failed'));
@@ -771,7 +851,7 @@ export default function Home() {
       newCode,
       current.suggestedDeclaration,
       current.hsDescription,
-      50, 1, originCountry, euCountry || undefined,
+      declaredValue, 1, originCountry, euCountry || undefined, shippingCost,
     );
     setReport(newReport);
     // Persist to localStorage if viewing history
@@ -885,13 +965,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* Declared value + Origin country + EU country inputs (visible when idle) */}
+        {/* Declared value + Origin country + EU country + Shipping (visible when idle) */}
         {!isBusy && batchStatus !== 'processing' && (
-          <div className="mt-4 grid grid-cols-3 gap-3 items-end">
+          <div className="mt-4 grid grid-cols-4 gap-3 items-end">
             <div>
-              <label className="text-[10px] text-white/30 block mb-1">申报价值 (USD)</label>
+              <label className="text-[10px] text-white/30 block mb-1">货值 (USD)</label>
               <input type="number" min={1} max={9999} value={declaredValue}
                 onChange={(e) => setDeclaredValue(Math.max(1, Math.min(9999, Number(e.target.value) || 1)))}
+                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-white/30 block mb-1">运费 (USD)</label>
+              <input type="number" min={0} max={999} value={shippingCost}
+                onChange={(e) => setShippingCost(Math.max(0, Math.min(999, Number(e.target.value) || 0)))}
                 className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
               />
             </div>
