@@ -9,6 +9,7 @@ import type { StoredAudit } from '@/lib/client-storage';
 import { useLocale } from '@/lib/i18n';
 import { generateAuditReport } from '@/lib/audit';
 import { EU_VAT_RATES } from '@/lib/eu-vat';
+import { checkSensitiveItem } from '@/lib/sensitive-items';
 
 // --- Constants ---
 const API_PATHS = { analyze: '/api/analyze-product' } as const;
@@ -37,6 +38,13 @@ interface AuditReport {
   suggestedPrice: number;
   shipmentRecommended: boolean;
   shipmentReason: string;
+  estimatedProfit: number;
+  profitMargin: number;
+  profitRecommendation: string;
+  profitReason: string;
+  countryComparison: { country: string; label: string; totalCost: number; duty: number }[];
+  bestOriginCountry: string;
+  bestOriginLabel: string;
   overallRisk: RiskLevel;
   suggestedDeclaration: string;
   dataSource: string;
@@ -435,6 +443,56 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
         </div>
       )}
 
+      {/* Profit conclusion banner */}
+      <div className={`p-5 rounded-xl border ${
+        report.profitRecommendation === 'recommended'
+          ? 'bg-gradient-to-r from-emerald-500/10 to-green-500/5 border-emerald-500/25'
+          : report.profitRecommendation === 'caution'
+            ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/5 border-amber-500/25'
+            : 'bg-gradient-to-r from-red-500/10 to-rose-500/5 border-red-500/25'
+      }`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            {report.profitRecommendation === 'recommended' ? (
+              <svg className="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10" /><polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : report.profitRecommendation === 'caution' ? (
+              <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            )}
+            <h3 className="text-sm font-semibold text-white/80">
+              {report.profitRecommendation === 'recommended' ? '建议出单' : report.profitRecommendation === 'caution' ? '谨慎出单' : '不建议出单'}
+            </h3>
+          </div>
+          <span className={`text-xs font-mono font-bold ${
+            report.profitRecommendation === 'recommended' ? 'text-emerald-400' : report.profitRecommendation === 'caution' ? 'text-amber-400' : 'text-red-400'
+          }`}>
+            {report.profitMargin > 0 ? '+' : ''}{report.profitMargin}%
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-xs mt-3">
+          <div>
+            <p className="text-white/30">建议售价</p>
+            <p className="text-white/70 font-mono">${report.suggestedPrice.toFixed(2)}</p>
+          </div>
+          <div>
+            <p className="text-white/30">总成本</p>
+            <p className="text-white/70 font-mono">${(report.suggestedPrice - report.estimatedProfit).toFixed(2)}</p>
+          </div>
+          <div>
+            <p className="text-white/30">预估利润</p>
+            <p className="text-white/70 font-mono">${report.estimatedProfit.toFixed(2)}</p>
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-white/40">{report.profitReason}</p>
+      </div>
+
       {/* Product info */}
       <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
         <div className="flex items-center justify-between mb-3">
@@ -473,6 +531,35 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
           riskLevel={report.eu.riskLevel} lines={[`${t('pdf.rate')} ${report.eu.dutyRate} + VAT ${report.eu.vatRate}%`,
             `${t('pdf.estimated_duty')}: €${report.eu.estimatedDuty.toFixed(2)} | ${t('pdf.estimated_vat')}: €${report.eu.estimatedVat.toFixed(2)}`]} />
       </div>
+
+      {/* Multi-country comparison */}
+      {report.countryComparison && report.countryComparison.length > 0 && (
+        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
+          <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
+            产地比价 — 推荐从 <span className="text-cyan-300">{report.bestOriginLabel}</span> 发货
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {report.countryComparison.map((c) => {
+              const isBest = c.country === report.bestOriginCountry;
+              const isCurrent = c.country === 'china';
+              const diff = c.totalCost - (report.countryComparison.find((x) => x.country === report.bestOriginCountry)?.totalCost || 0);
+              return (
+                <div key={c.country} className={`flex-1 min-w-[100px] p-3 rounded-lg border text-center ${
+                  isBest ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/[0.03] border-white/10'
+                }`}>
+                  <p className="text-xs font-medium text-white/60 mb-1">{c.label}</p>
+                  <p className="text-sm font-mono font-bold text-white/80">${c.totalCost.toFixed(2)}</p>
+                  <p className="text-[10px] text-white/30">关税: ${c.duty.toFixed(2)}</p>
+                  {isBest && <p className="text-[10px] text-cyan-400 mt-1">最优</p>}
+                  {isCurrent && !isBest && (
+                    <p className="text-[10px] text-emerald-400 mt-1">比当前省 ${diff.toFixed(2)}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Landed cost */}
       {report.landedCost && (
@@ -691,6 +778,7 @@ export default function Home() {
   const [shippingCost, setShippingCost] = useState(10);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [productDescription, setProductDescription] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   // Batch state
   const [files, setFiles] = useState<File[]>([]);
@@ -731,6 +819,16 @@ export default function Home() {
     }
     if (arr.length > MAX_FILES) { setError(t('error.max_files', { max: MAX_FILES })); return; }
 
+    // Sensitive item check on user-provided description
+    if (productDescription) {
+      const combinedDesc = [linkUrl ? `链接: ${linkUrl}` : '', productDescription].filter(Boolean).join('\n');
+      const sensitive = checkSensitiveItem(productDescription, '', '', combinedDesc);
+      if (sensitive) {
+        setError(`⚠️ ${sensitive.label}`);
+        return;
+      }
+    }
+
     setError('');
     setSelectedHistory(null);
     setReport(null);
@@ -761,6 +859,16 @@ export default function Home() {
         if (gen !== generationRef.current) return;
         const result = await callApi(base64, controller.signal);
         if (gen !== generationRef.current) return;
+        // Sensitive item check from AI result
+        const sensitiveCheck = checkSensitiveItem(result.audit.productName || '', result.audit.material || '', result.audit.usage || '', productDescription);
+        if (sensitiveCheck && sensitiveCheck.type === 'prohibited') {
+          setError(`⛔ ${sensitiveCheck.label}`);
+          setStatus('error');
+          return;
+        }
+        if (sensitiveCheck && sensitiveCheck.type !== 'prohibited') {
+          result.audit.warnings = [...(result.audit.warnings || []), `⚠️ ${sensitiveCheck.label}`];
+        }
         setReport(result.audit);
         setSuggestedCodes(result.suggestedHsCodes ?? []);
         setDemoMode(result.demoMode ?? false);
@@ -799,7 +907,11 @@ export default function Home() {
         if (gen !== generationRef.current) return;
         const result = await callApi(base64, controller.signal);
         if (gen !== generationRef.current) return;
-
+        // Sensitive item check for batch
+        const sCheck = checkSensitiveItem(result.audit.productName || '', result.audit.material || '', result.audit.usage || '');
+        if (sCheck) {
+          result.audit.warnings = [...(result.audit.warnings || []), `⚠️ ${sCheck.label}`];
+        }
         accumulated.push(result.audit);
         setBatchResults(accumulated);
         setReport(result.audit);
@@ -835,9 +947,10 @@ export default function Home() {
   }
 
   async function callApi(imageBase64: string, signal?: AbortSignal) {
+    const combinedDesc = [linkUrl ? `链接: ${linkUrl}` : '', productDescription].filter(Boolean).join('\n');
     const res = await fetch(API_PATHS.analyze, {
       method: 'POST', headers: JSON_HEADERS,
-      body: JSON.stringify({ image: imageBase64, productDescription: productDescription || undefined, declaredValue, originCountry, euCountry: euCountry || undefined, shippingEstimate: shippingCost }),
+      body: JSON.stringify({ image: imageBase64, productDescription: combinedDesc || undefined, declaredValue, originCountry, euCountry: euCountry || undefined, shippingEstimate: shippingCost }),
       signal,
     });
     if (!res.ok) throw new Error((await res.json()).error || t('error.analysis_failed'));
@@ -1011,7 +1124,28 @@ export default function Home() {
         {/* Declared value + Origin country + EU country + Shipping (visible when idle) */}
         {!isBusy && batchStatus !== 'processing' && (
           <>
-            <div className="mt-4 grid grid-cols-4 gap-3 items-end">
+            {/* Scene presets */}
+            <div className="mt-4 flex gap-2 mb-3">
+              <button type="button" onClick={() => { setDeclaredValue(5); setShippingCost(4); }}
+                className={`px-3 py-1.5 rounded-lg border text-[10px] transition-colors ${
+                  declaredValue === 5 && shippingCost === 4 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
+                }`}>
+                📦 Temu 半托管
+              </button>
+              <button type="button" onClick={() => { setDeclaredValue(15); setShippingCost(6); }}
+                className={`px-3 py-1.5 rounded-lg border text-[10px] transition-colors ${
+                  declaredValue === 15 && shippingCost === 6 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
+                }`}>
+                🎵 TikTok Shop
+              </button>
+              <button type="button" onClick={() => { setDeclaredValue(50); setShippingCost(10); }}
+                className={`px-3 py-1.5 rounded-lg border text-[10px] transition-colors ${
+                  declaredValue === 50 && shippingCost === 10 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
+                }`}>
+                🌐 独立站直邮
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-3 items-end">
               <div>
                 <label className="text-[10px] text-white/30 block mb-1">货值 (USD)</label>
                 <input type="number" min={1} max={9999} value={declaredValue}
@@ -1039,15 +1173,26 @@ export default function Home() {
                 })),
               ]} onChange={setEuCountry} />
             </div>
-            <div className="mt-3">
-              <label className="text-[10px] text-white/30 block mb-1">产品描述（可选）</label>
-              <textarea
-                value={productDescription}
-                onChange={(e) => setProductDescription(e.target.value)}
-                placeholder="输入产品名称、材质、用途等描述信息，帮助 AI 更准确识别分类（例如：无线蓝牙耳机，塑料外壳，用于手机音频）"
-                rows={2}
-                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30 resize-none"
-              />
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">产品描述（可选）</label>
+                <textarea
+                  value={productDescription}
+                  onChange={(e) => setProductDescription(e.target.value)}
+                  placeholder="输入产品名称、材质、用途等描述信息，帮助 AI 更准确识别分类（例如：无线蓝牙耳机，塑料外壳，用于手机音频）"
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30 resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">商品链接（可选）</label>
+                <input
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="粘贴 1688 / Amazon / 商品链接"
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30"
+                />
+              </div>
             </div>
           </>
         )}

@@ -53,6 +53,13 @@ export interface AuditReport {
   shipmentRecommended: boolean;
   shipmentReason: string;
   overallRisk: 'low' | 'medium' | 'high';
+  estimatedProfit: number;
+  profitMargin: number;
+  profitRecommendation: 'recommended' | 'caution' | 'not_recommended';
+  profitReason: string;
+  countryComparison: { country: string; label: string; totalCost: number; duty: number }[];
+  bestOriginCountry: string;
+  bestOriginLabel: string;
   suggestedDeclaration: string;
   dataSource: string;
   dataUpdated: string;
@@ -232,6 +239,38 @@ export function generateAuditReport(
       ? '含电池/危险品，运输受限。需使用特定物流渠道并提供 MSDS/UN38.3 报告。'
       : '当前产地无额外关税运输限制，可直接发运。';
 
+  // Profit calculation
+  const estimatedProfit = Math.round((suggestedPrice - grandUs) * 100) / 100;
+  const profitMargin = suggestedPrice > 0 ? Math.round((estimatedProfit / suggestedPrice) * 1000) / 10 : 0;
+  const profitRecommendation: 'recommended' | 'caution' | 'not_recommended' =
+    profitMargin > 30 ? 'recommended' : profitMargin > 15 ? 'caution' : 'not_recommended';
+  const profitReason = profitRecommendation === 'recommended'
+    ? `利润率 ${profitMargin}%，利润空间充足，建议出单。`
+    : profitRecommendation === 'caution'
+      ? `利润率 ${profitMargin}%，需优化成本或提高售价。考虑：1) 降低申报货值 2) 选择低税率产地 3) 提高终端售价。`
+      : `利润率仅 ${profitMargin}%，利润过低。不建议直接发运，建议：1) 提高售价 2) 更换低税率 HS 编码 3) 更换产地。`;
+
+  // Multi-country comparison (calculate landed cost for each origin)
+  const countryComparison = [
+    { country: 'china', label: '中国' },
+    { country: 'vietnam', label: '越南' },
+    { country: 'thailand', label: '泰国' },
+    { country: 'mexico', label: '墨西哥' },
+  ].map((c) => {
+    const ship = shippingEstimate ?? SHIPPING_ESTIMATES[c.country] ?? 10;
+    const isChinaC = c.country === 'china';
+    const sec301 = isChinaC ? section301rate : 0;
+    const cUsAdValorem = declaredValue * quantity * US_AD_VALOREM;
+    const cUsFlat = US_FLAT_RATE * quantity;
+    const cUsBase = Math.max(cUsAdValorem, cUsFlat);
+    const cDuty = Math.round((cUsBase + declaredValue * quantity * sec301) * 100) / 100;
+    const cTotal = Math.round((declaredValue * quantity + ship + cDuty) * 100) / 100;
+    return { country: c.country, label: c.label, totalCost: cTotal, duty: cDuty };
+  });
+  const best = countryComparison.reduce((a, b) => a.totalCost < b.totalCost ? a : b);
+  const bestOriginCountry = best.country;
+  const bestOriginLabel = best.label;
+
   return {
     productName,
     material,
@@ -273,6 +312,13 @@ export function generateAuditReport(
     shipmentRecommended,
     shipmentReason,
     overallRisk,
+    estimatedProfit,
+    profitMargin,
+    profitRecommendation,
+    profitReason,
+    countryComparison,
+    bestOriginCountry,
+    bestOriginLabel,
     suggestedDeclaration,
     dataSource: 'GlobalGuard 本地数据库',
     dataUpdated: getLastUpdated(),
