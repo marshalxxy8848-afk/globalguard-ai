@@ -4,10 +4,11 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import HistorySidebar from '@/app/components/HistorySidebar';
-import { loadAudits, saveAudit, deleteAudit, clearAudits } from '@/lib/client-storage';
+import { loadAudits, saveAudit, deleteAudit, clearAudits, toggleFavorite, getFavorites } from '@/lib/client-storage';
 import type { StoredAudit } from '@/lib/client-storage';
 import { useLocale } from '@/lib/i18n';
 import { generateAuditReport } from '@/lib/audit';
+import { EU_VAT_RATES } from '@/lib/eu-vat';
 
 // --- Constants ---
 const API_PATHS = { analyze: '/api/analyze-product' } as const;
@@ -32,6 +33,133 @@ interface AuditReport {
   overallRisk: RiskLevel;
   suggestedDeclaration: string;
   warnings: string[];
+}
+
+const INVOICE_SHIPPER_KEY = 'globalguard_shipper';
+
+interface ShipperInfo {
+  name: string; address: string; city: string; country: string; phone: string;
+}
+
+function loadShipper(): ShipperInfo {
+  if (typeof window === 'undefined') return { name: '', address: '', city: '', country: '', phone: '' };
+  try {
+    const raw = localStorage.getItem(INVOICE_SHIPPER_KEY);
+    return raw ? JSON.parse(raw) : { name: '', address: '', city: '', country: '', phone: '' };
+  } catch { return { name: '', address: '', city: '', country: '', phone: '' }; }
+}
+
+function saveShipper(info: ShipperInfo): void {
+  try { localStorage.setItem(INVOICE_SHIPPER_KEY, JSON.stringify(info)); } catch { /* ignore */ }
+}
+
+// --- Commercial Invoice PDF (structured jsPDF for customs clearance) ---
+async function downloadInvoice(report: AuditReport, originCountry: string, euCountryLabel: string) {
+  const { default: jsPDF } = await import('jspdf');
+
+  // Prompt for shipper/consignee info if not yet saved
+  let shipper = loadShipper();
+  if (!shipper.name) {
+    shipper = { name: 'Your Company Name', address: '123 Export St', city: 'Shenzhen', country: 'China', phone: '+86-123-4567' };
+    saveShipper(shipper);
+  }
+
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210;
+  const margin = 15;
+  const col2 = 100;
+
+  // Title
+  pdf.setFontSize(20);
+  pdf.setTextColor(0, 150, 200);
+  pdf.text('COMMERCIAL INVOICE', margin, 20);
+  pdf.setDrawColor(0, 150, 200);
+  pdf.line(margin, 23, pageW - margin, 23);
+
+  // Invoice info
+  pdf.setFontSize(8);
+  pdf.setTextColor(100);
+  const invNo = `INV-${Date.now().toString(36).toUpperCase()}`;
+  const today = new Date().toISOString().split('T')[0];
+  pdf.text(`Invoice No: ${invNo}`, margin, 32);
+  pdf.text(`Date: ${today}`, margin, 38);
+
+  // Shipper
+  pdf.setFontSize(10);
+  pdf.setTextColor(50);
+  pdf.text('SHIPPER / EXPORTER', margin, 48);
+  pdf.setFontSize(9);
+  pdf.setTextColor(80);
+  pdf.text([shipper.name, shipper.address, `${shipper.city}, ${shipper.country}`, shipper.phone], margin, 54);
+
+  // Consignee
+  pdf.setFontSize(10);
+  pdf.setTextColor(50);
+  pdf.text('CONSIGNEE', col2, 48);
+  pdf.setFontSize(9);
+  pdf.setTextColor(80);
+  pdf.text(['Buyer Name', 'Buyer Address', 'Destination City, EU', 'Phone: +XX-XXX'], col2, 54);
+
+  // Horizontal line
+  pdf.setDrawColor(200);
+  pdf.line(margin, 72, pageW - margin, 72);
+
+  // Table header
+  const y0 = 78;
+  const cols = [
+    { x: margin, w: 55, label: 'Description' },
+    { x: margin + 55, w: 20, label: 'HS Code' },
+    { x: margin + 75, w: 15, label: 'Qty' },
+    { x: margin + 90, w: 25, label: 'Unit Value' },
+    { x: margin + 115, w: 25, label: 'Total Value' },
+    { x: margin + 140, w: 25, label: 'Origin' },
+  ];
+
+  pdf.setFontSize(8);
+  pdf.setTextColor(50);
+  pdf.setFillColor(240, 248, 255);
+  cols.forEach((c) => { pdf.rect(c.x, y0, c.w, 7, 'F'); pdf.text(c.label, c.x + 1, y0 + 5); });
+
+  // Table row
+  const rowY = y0 + 7;
+  pdf.setTextColor(80);
+  pdf.setFontSize(9);
+  pdf.text(report.productName.slice(0, 40), margin + 1, rowY + 4);
+  pdf.setFontSize(8);
+  pdf.text(report.selectedHsCode, margin + 56, rowY + 4);
+  pdf.text('1', margin + 76, rowY + 4);
+  pdf.text(`$50.00`, margin + 91, rowY + 4);
+  pdf.text(`$50.00`, margin + 116, rowY + 4);
+  const originLabel = originCountry === 'china' ? 'China' : originCountry === 'vietnam' ? 'Vietnam' : originCountry === 'thailand' ? 'Thailand' : 'Mexico';
+  pdf.text(originLabel, margin + 141, rowY + 4);
+
+  // Bottom border
+  pdf.line(margin, rowY + 10, pageW - margin, rowY + 10);
+
+  // Totals
+  const totY = rowY + 18;
+  pdf.setFontSize(9);
+  pdf.setTextColor(50);
+  pdf.text(`Subtotal:`, col2, totY);
+  pdf.text(`$50.00`, col2 + 35, totY);
+  pdf.text(`Estimated Duty:`, col2, totY + 6);
+  pdf.text(`$${report.us.estimatedDuty.toFixed(2)} (US) / €${report.eu.estimatedDuty.toFixed(2)} (EU)`, col2 + 35, totY + 6);
+
+  // Declaration
+  const decY = totY + 14;
+  pdf.setDrawColor(200);
+  pdf.line(margin, decY, pageW - margin, decY);
+  pdf.setFontSize(7);
+  pdf.setTextColor(120);
+  pdf.text('I declare that the above information is true and correct.', margin, decY + 6);
+  pdf.text('This invoice is for customs purposes only.', margin, decY + 11);
+  pdf.text(`HS Code: ${report.selectedHsCode} | Origin: ${originLabel} | EU Destination: ${euCountryLabel || 'N/A'}`, margin, decY + 16);
+
+  // Signature
+  pdf.text('Authorized Signature: ___________________', margin, decY + 26);
+  pdf.text('Date: ___________________', margin, decY + 32);
+
+  pdf.save(`invoice-${report.selectedHsCode}.pdf`);
 }
 
 // --- PDF export (html2canvas for reliable CJK rendering) ---
@@ -233,9 +361,10 @@ function HsCodeEditor({ code, suggestions, onChange }: {
 }
 
 // --- Report display ---
-function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCodeChange }: {
+function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCodeChange, isFav, onToggleFav, onDownloadInvoice }: {
   report: AuditReport; demoMode?: boolean; demoReason?: string;
   suggestedCodes?: SuggestedCode[]; onHsCodeChange?: (code: string) => void;
+  isFav?: boolean; onToggleFav?: () => void; onDownloadInvoice?: () => void;
 }) {
   const { t, locale } = useLocale();
 
@@ -260,7 +389,16 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
       {/* Product info */}
       <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">{report.productName}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">{report.productName}</h2>
+            {onToggleFav && (
+              <button onClick={onToggleFav} className="transition-colors" title={isFav ? '取消收藏' : '收藏'}>
+                <svg className={`w-4 h-4 ${isFav ? 'text-amber-400' : 'text-white/20 hover:text-amber-400/50'}`} viewBox="0 0 24 24" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.5}>
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </button>
+            )}
+          </div>
           <RiskBadge level={report.overallRisk} />
         </div>
         <div className="text-xs text-white/40 space-y-1">
@@ -290,16 +428,30 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
 
       <AgenticCta risk={report.overallRisk} duty={report.us.estimatedDuty} />
 
-      {/* PDF download */}
-      <button onClick={async () => { await downloadPdf(report, locale, t); }}
-        className="w-full py-2.5 rounded-xl border border-white/10 bg-white/[0.02] text-sm text-white/40 hover:text-white/60 hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-2">
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
-        {t('report.download_pdf')}
-      </button>
+      {/* Download buttons */}
+      <div className="flex gap-3">
+        <button onClick={async () => { await downloadPdf(report, locale, t); }}
+          className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/[0.02] text-sm text-white/40 hover:text-white/60 hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-2">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          {t('report.download_pdf')}
+        </button>
+        {onDownloadInvoice && (
+          <button onClick={onDownloadInvoice}
+            className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/[0.02] text-sm text-white/40 hover:text-white/60 hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            下载商业发票
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -316,6 +468,8 @@ export default function Home() {
   const [demoReason, setDemoReason] = useState('');
   const [declaredValue, setDeclaredValue] = useState(50);
   const [originCountry, setOriginCountry] = useState('china');
+  const [euCountry, setEuCountry] = useState('');
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   // Batch state
   const [files, setFiles] = useState<File[]>([]);
@@ -334,9 +488,10 @@ export default function Home() {
   const generationRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Load history from localStorage
+  // Load history + favorites from localStorage
   useEffect(() => {
     setStoredAudits(loadAudits());
+    setFavorites(getFavorites());
   }, []);
 
   // Cleanup object URLs
@@ -461,7 +616,7 @@ export default function Home() {
   async function callApi(imageBase64: string, signal?: AbortSignal) {
     const res = await fetch(API_PATHS.analyze, {
       method: 'POST', headers: JSON_HEADERS,
-      body: JSON.stringify({ image: imageBase64, declaredValue, originCountry }),
+      body: JSON.stringify({ image: imageBase64, declaredValue, originCountry, euCountry: euCountry || undefined }),
       signal,
     });
     if (!res.ok) throw new Error((await res.json()).error || t('error.analysis_failed'));
@@ -482,6 +637,7 @@ export default function Home() {
     };
     saveAudit(stored);
     setStoredAudits(loadAudits());
+    setFavorites(getFavorites());
   }
 
   // --- History handlers ---
@@ -517,7 +673,7 @@ export default function Home() {
       newCode,
       current.suggestedDeclaration,
       current.hsDescription,
-      50, 1, originCountry,
+      50, 1, originCountry, euCountry || undefined,
     );
     setReport(newReport);
     // Persist to localStorage if viewing history
@@ -548,13 +704,18 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <HistorySidebar
-        audits={storedAudits}
+        audits={[...storedAudits].sort((a, b) => {
+          const aFav = favorites.includes(a.id) ? 0 : 1;
+          const bFav = favorites.includes(b.id) ? 0 : 1;
+          return aFav - bFav;
+        })}
         selectedId={selectedHistory?.id ?? null}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onSelect={handleSelectHistory}
         onDelete={handleDeleteHistory}
         onClearAll={handleClearAll}
+        favorites={favorites}
       />
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-10">
@@ -626,17 +787,17 @@ export default function Home() {
           )}
         </div>
 
-        {/* Declared value + Origin country inputs (visible when idle) */}
+        {/* Declared value + Origin country + EU country inputs (visible when idle) */}
         {!isBusy && batchStatus !== 'processing' && (
-          <div className="mt-4 flex gap-3 items-end">
-            <div className="flex-1">
+          <div className="mt-4 grid grid-cols-3 gap-3 items-end">
+            <div>
               <label className="text-[10px] text-white/30 block mb-1">申报价值 (USD)</label>
               <input type="number" min={1} max={9999} value={declaredValue}
                 onChange={(e) => setDeclaredValue(Math.max(1, Math.min(9999, Number(e.target.value) || 1)))}
                 className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
               />
             </div>
-            <div className="flex-1">
+            <div>
               <label className="text-[10px] text-white/30 block mb-1">原产国</label>
               <select value={originCountry} onChange={(e) => setOriginCountry(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30 appearance-none cursor-pointer"
@@ -645,6 +806,17 @@ export default function Home() {
                 <option value="vietnam">越南</option>
                 <option value="thailand">泰国</option>
                 <option value="mexico">墨西哥</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-white/30 block mb-1">欧盟目的国（VAT）</label>
+              <select value={euCountry} onChange={(e) => setEuCountry(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30 appearance-none cursor-pointer"
+              >
+                <option value="">不指定（默认 20%）</option>
+                {Object.entries(EU_VAT_RATES).map(([code, { name, rate }]) => (
+                  <option key={code} value={code}>{name} ({(rate * 100).toFixed(1)}%)</option>
+                ))}
               </select>
             </div>
           </div>
@@ -759,6 +931,12 @@ export default function Home() {
             demoReason={selectedHistory ? undefined : demoReason}
             suggestedCodes={suggestedCodes}
             onHsCodeChange={handleHsCodeChange}
+            isFav={selectedHistory ? favorites.includes(selectedHistory.id) : false}
+            onToggleFav={selectedHistory ? () => {
+              const nowFav = toggleFavorite(selectedHistory.id);
+              setFavorites(getFavorites());
+            } : undefined}
+            onDownloadInvoice={() => downloadInvoice(currentReport, originCountry, euCountry || 'EU')}
           />
         )}
       </main>

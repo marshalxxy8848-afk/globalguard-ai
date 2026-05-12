@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     let imageBase64: string;
     let declaredValue = 50;
     let originCountry = 'china';
+    let euCountry: string | undefined;
 
     const contentType = request.headers.get('content-type') || '';
 
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
       imageBase64 = body.image;
       declaredValue = Math.max(1, Math.min(9999, Number(body.declaredValue) || 50));
       originCountry = body.originCountry || 'china';
+      euCountry = body.euCountry || undefined;
     } else if (contentType.includes('multipart/form-data')) {
       const form = await request.formData();
       const file = form.get('image') as File | null;
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
       declaredValue,
       1,
       originCountry,
+      euCountry,
     );
 
     // Auto-save to audit history if user is logged in

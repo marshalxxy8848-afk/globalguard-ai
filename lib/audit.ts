@@ -1,4 +1,5 @@
 import { findByHsCode, type CategoryItem } from './hs-codes';
+import { getEuVatRate, getEuCountryName } from './eu-vat';
 
 export interface AuditReport {
   productName: string;
@@ -30,7 +31,7 @@ export interface AuditReport {
 // US tariff assumptions (post-T86 scenario)
 const US_FLAT_RATE = 25;       // $25/package
 const US_AD_VALOREM = 0.30;    // 30% ad valorem
-const EU_VAT_RATE = 0.20;      // 20% VAT
+// EU VAT rate is now dynamic per country via getEuVatRate()
 
 export function generateAuditReport(
   productName: string,
@@ -42,6 +43,7 @@ export function generateAuditReport(
   declaredValue: number = 50,
   quantity: number = 1,
   originCountry: string = 'china',
+  euCountry?: string,
 ): AuditReport {
   const dbItem = findByHsCode(hsCode);
   const warnings: string[] = [];
@@ -66,11 +68,13 @@ export function generateAuditReport(
   if (usDuty > 20) usRisk = 'high';
   else if (usDuty > 10) usRisk = 'medium';
 
-  // EU duty calculation
+  // EU duty calculation (dynamic VAT per country)
+  const euVatRate = getEuVatRate(euCountry);
   const euDutyRate = dbItem ? dbItem.base_tariff_eu / 100 : 0.05;
   const euDuty = declaredValue * quantity * euDutyRate;
-  const euVat = (declaredValue * quantity + euDuty) * EU_VAT_RATE;
+  const euVat = (declaredValue * quantity + euDuty) * euVatRate;
   const totalEu = euDuty + euVat;
+  const euCountryLabel = euCountry ? getEuCountryName(euCountry) : 'EU';
 
   // EU risk level
   let euRisk: 'low' | 'medium' | 'high' = 'low';
@@ -120,7 +124,7 @@ export function generateAuditReport(
       estimatedVat: Math.round(euVat * 100) / 100,
       totalEu: Math.round(totalEu * 100) / 100,
       dutyRate: `${(euDutyRate * 100).toFixed(1)}%`,
-      vatRate: EU_VAT_RATE * 100,
+      vatRate: Math.round(euVatRate * 100 * 10) / 10,
       riskLevel: euRisk,
     },
     restricted,
