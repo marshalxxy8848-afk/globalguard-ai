@@ -11,6 +11,27 @@ export interface HsCodeItem {
   vat_eu: number;
   restricted: boolean;
   section_301_tariff: number;
+  conditions?: string;    // 监管条件代码 (e.g. "4AB"), empty = none
+  tax_rebate?: number;    // 出口退税率百分比 (e.g. 13), null = none
+}
+
+export function getLastUpdated(): string {
+  return (hsCodes as any).metadata?.last_updated || 'unknown';
+}
+
+export function getConditionLabel(code: string): string {
+  const labels: Record<string, string> = {
+    '1': '进口许可证',
+    '4': '出口许可证',
+    'A': '进口检验检疫',
+    'B': '出口检验检疫',
+    'O': '自动进口许可证',
+    'Y': '原产地证明',
+    'P': '固体废物进口',
+    's': '适用ITA税率',
+    'x': '加工贸易禁止',
+  };
+  return labels[code] || code;
 }
 
 export interface CategoryItem extends HsCodeItem {

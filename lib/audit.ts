@@ -1,4 +1,4 @@
-import { findByHsCode, type CategoryItem } from './hs-codes';
+import { findByHsCode, getLastUpdated, type CategoryItem } from './hs-codes';
 import { getEuVatRate, getEuCountryName } from './eu-vat';
 
 export interface AuditReport {
@@ -23,8 +23,12 @@ export interface AuditReport {
     riskLevel: 'low' | 'medium' | 'high';
   };
   restricted: boolean;
+  conditions: string;       // 监管条件代码
+  taxRebate: number | null; // 出口退税率百分比
   overallRisk: 'low' | 'medium' | 'high';
   suggestedDeclaration: string;
+  dataSource: string;       // 数据来源
+  dataUpdated: string;      // 数据更新日期
   warnings: string[];
 }
 
@@ -106,6 +110,11 @@ export function generateAuditReport(
     .join('，')
     .slice(0, 120);
 
+  // Conditional warnings for regulatory conditions
+  if (dbItem?.conditions) {
+    warnings.push(`监管条件：${dbItem.conditions} — 请确认出口资质。`);
+  }
+
   return {
     productName,
     material,
@@ -128,8 +137,12 @@ export function generateAuditReport(
       riskLevel: euRisk,
     },
     restricted,
+    conditions: dbItem?.conditions ?? '',
+    taxRebate: dbItem?.tax_rebate ?? null,
     overallRisk,
     suggestedDeclaration,
+    dataSource: 'GlobalGuard 本地数据库',
+    dataUpdated: getLastUpdated(),
     warnings,
   };
 }

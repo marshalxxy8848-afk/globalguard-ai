@@ -30,8 +30,12 @@ interface AuditReport {
   us: { estimatedDuty: number; dutyRate: string; calculation: string; t86Impact: string; riskLevel: RiskLevel };
   eu: { estimatedDuty: number; estimatedVat: number; totalEu: number; dutyRate: string; vatRate: number; riskLevel: RiskLevel };
   restricted: boolean;
+  conditions: string;
+  taxRebate: number | null;
   overallRisk: RiskLevel;
   suggestedDeclaration: string;
+  dataSource: string;
+  dataUpdated: string;
   warnings: string[];
 }
 
@@ -460,6 +464,51 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
             `${t('pdf.estimated_duty')}: €${report.eu.estimatedDuty.toFixed(2)} | ${t('pdf.estimated_vat')}: €${report.eu.estimatedVat.toFixed(2)}`]} />
       </div>
 
+      {/* Regulatory conditions */}
+      {report.conditions && report.conditions.length > 0 && (
+        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/15">
+          <div className="flex items-start gap-3">
+            <svg className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            </svg>
+            <div>
+              <h3 className="text-xs font-semibold text-amber-300 mb-1">中国海关监管条件</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {report.conditions.split('').map((c) => {
+                  const labels: Record<string, string> = {
+                    '1': '进口许可证', '4': '出口许可证', 'A': '进口检验检疫',
+                    'B': '出口检验检疫', 'O': '自动进口许可证', 'Y': '原产地证明',
+                    'P': '固体废物进口',
+                  };
+                  return (
+                    <span key={c} className="px-2 py-0.5 rounded bg-amber-500/10 text-[10px] text-amber-400 border border-amber-500/20" title={labels[c] || c}>
+                      {c} {labels[c] || ''}
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-[10px] text-amber-300/50">出口前请确认具备相应资质或许可证</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export tax rebate */}
+      {report.taxRebate != null && (
+        <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/15">
+          <div className="flex items-center gap-3">
+            <svg className="w-4 h-4 text-green-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              <polyline points="17 6 23 6 23 12" />
+            </svg>
+            <div>
+              <span className="text-xs text-green-300/80">出口退税率</span>
+              <span className="ml-2 text-sm font-semibold text-green-300">{report.taxRebate}%</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Declaration */}
       <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
         <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">{t('report.declaration_title')}</h3>
@@ -467,6 +516,15 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
       </div>
 
       <AgenticCta risk={report.overallRisk} duty={report.us.estimatedDuty} />
+
+      {/* Data freshness */}
+      <div className="text-[10px] text-white/20 text-center flex items-center justify-center gap-1">
+        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        数据来源：{report.dataSource} · 更新于 {report.dataUpdated}
+      </div>
 
       {/* Download buttons */}
       <div className="flex gap-3">
