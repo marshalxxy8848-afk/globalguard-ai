@@ -34,6 +34,9 @@ interface AuditReport {
   restricted: boolean;
   conditions: string;
   taxRebate: number | null;
+  suggestedPrice: number;
+  shipmentRecommended: boolean;
+  shipmentReason: string;
   overallRisk: RiskLevel;
   suggestedDeclaration: string;
   dataSource: string;
@@ -506,6 +509,45 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
         </div>
       )}
 
+      {/* Suggested retail price */}
+      {report.suggestedPrice > 0 && (
+        <div className="p-5 rounded-xl bg-gradient-to-r from-emerald-500/5 to-teal-500/5 border border-emerald-500/15">
+          <h3 className="text-xs font-semibold text-emerald-300/80 uppercase tracking-wider mb-2">建议零售价</h3>
+          <p className="text-2xl font-bold text-emerald-300 font-mono">${report.suggestedPrice.toFixed(2)}</p>
+          <p className="mt-1 text-[10px] text-emerald-300/50">基于成本、关税及市场溢价计算，仅供参考</p>
+        </div>
+      )}
+
+      {/* Shipment recommendation */}
+      <div className={`p-5 rounded-xl border ${
+        report.shipmentRecommended
+          ? 'bg-green-500/5 border-green-500/15'
+          : 'bg-orange-500/5 border-orange-500/15'
+      }`}>
+        <div className="flex items-start gap-3">
+          {report.shipmentRecommended ? (
+            <svg className="w-5 h-5 text-green-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          )}
+          <div>
+            <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
+              {report.shipmentRecommended ? '建议直发' : '运输建议'}
+            </h3>
+            <p className={`text-xs leading-relaxed ${report.shipmentRecommended ? 'text-green-300/70' : 'text-orange-300/70'}`}>
+              {report.shipmentReason}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Compliance flags */}
       {report.compliance && (
         <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
@@ -648,6 +690,7 @@ export default function Home() {
   const [euCountry, setEuCountry] = useState('');
   const [shippingCost, setShippingCost] = useState(10);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [productDescription, setProductDescription] = useState('');
 
   // Batch state
   const [files, setFiles] = useState<File[]>([]);
@@ -794,7 +837,7 @@ export default function Home() {
   async function callApi(imageBase64: string, signal?: AbortSignal) {
     const res = await fetch(API_PATHS.analyze, {
       method: 'POST', headers: JSON_HEADERS,
-      body: JSON.stringify({ image: imageBase64, declaredValue, originCountry, euCountry: euCountry || undefined, shippingEstimate: shippingCost }),
+      body: JSON.stringify({ image: imageBase64, productDescription: productDescription || undefined, declaredValue, originCountry, euCountry: euCountry || undefined, shippingEstimate: shippingCost }),
       signal,
     });
     if (!res.ok) throw new Error((await res.json()).error || t('error.analysis_failed'));
@@ -967,34 +1010,46 @@ export default function Home() {
 
         {/* Declared value + Origin country + EU country + Shipping (visible when idle) */}
         {!isBusy && batchStatus !== 'processing' && (
-          <div className="mt-4 grid grid-cols-4 gap-3 items-end">
-            <div>
-              <label className="text-[10px] text-white/30 block mb-1">货值 (USD)</label>
-              <input type="number" min={1} max={9999} value={declaredValue}
-                onChange={(e) => setDeclaredValue(Math.max(1, Math.min(9999, Number(e.target.value) || 1)))}
-                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
+          <>
+            <div className="mt-4 grid grid-cols-4 gap-3 items-end">
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">货值 (USD)</label>
+                <input type="number" min={1} max={9999} value={declaredValue}
+                  onChange={(e) => setDeclaredValue(Math.max(1, Math.min(9999, Number(e.target.value) || 1)))}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 block mb-1">运费 (USD)</label>
+                <input type="number" min={0} max={999} value={shippingCost}
+                  onChange={(e) => setShippingCost(Math.max(0, Math.min(999, Number(e.target.value) || 0)))}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
+                />
+              </div>
+              <CustomSelect label="原产国" value={originCountry} options={[
+                { value: 'china', label: '中国' },
+                { value: 'vietnam', label: '越南' },
+                { value: 'thailand', label: '泰国' },
+                { value: 'mexico', label: '墨西哥' },
+              ]} onChange={setOriginCountry} />
+              <CustomSelect label="欧盟目的国（VAT）" value={euCountry} options={[
+                { value: '', label: '不指定（默认 20%）' },
+                ...Object.entries(EU_VAT_RATES).map(([code, { name, rate }]) => ({
+                  value: code, label: `${name} (${(rate * 100).toFixed(1)}%)`,
+                })),
+              ]} onChange={setEuCountry} />
+            </div>
+            <div className="mt-3">
+              <label className="text-[10px] text-white/30 block mb-1">产品描述（可选）</label>
+              <textarea
+                value={productDescription}
+                onChange={(e) => setProductDescription(e.target.value)}
+                placeholder="输入产品名称、材质、用途等描述信息，帮助 AI 更准确识别分类（例如：无线蓝牙耳机，塑料外壳，用于手机音频）"
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30 resize-none"
               />
             </div>
-            <div>
-              <label className="text-[10px] text-white/30 block mb-1">运费 (USD)</label>
-              <input type="number" min={0} max={999} value={shippingCost}
-                onChange={(e) => setShippingCost(Math.max(0, Math.min(999, Number(e.target.value) || 0)))}
-                className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/60 outline-none focus:border-cyan-500/30"
-              />
-            </div>
-            <CustomSelect label="原产国" value={originCountry} options={[
-              { value: 'china', label: '中国' },
-              { value: 'vietnam', label: '越南' },
-              { value: 'thailand', label: '泰国' },
-              { value: 'mexico', label: '墨西哥' },
-            ]} onChange={setOriginCountry} />
-            <CustomSelect label="欧盟目的国（VAT）" value={euCountry} options={[
-              { value: '', label: '不指定（默认 20%）' },
-              ...Object.entries(EU_VAT_RATES).map(([code, { name, rate }]) => ({
-                value: code, label: `${name} (${(rate * 100).toFixed(1)}%)`,
-              })),
-            ]} onChange={setEuCountry} />
-          </div>
+          </>
         )}
 
         {/* Error */}

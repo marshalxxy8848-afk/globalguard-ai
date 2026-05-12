@@ -55,9 +55,12 @@ function parseAIResponse(text: string): { productName: string; material: string;
 
 // --- Provider-specific callers ---
 
-async function callDeepSeek(imageBase64: string): Promise<AIVisionResult | null> {
+async function callDeepSeek(imageBase64: string, productDescription?: string): Promise<AIVisionResult | null> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return null;
+
+  const descText = productDescription ? `\nAdditional product info: ${productDescription}` : '';
+  const userText = `Classify this product for customs purposes.${descText}`;
 
   try {
     const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -70,7 +73,7 @@ async function callDeepSeek(imageBase64: string): Promise<AIVisionResult | null>
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Classify this product for customs purposes.' },
+              { type: 'text', text: userText },
               { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
             ],
           },
@@ -98,9 +101,12 @@ async function callDeepSeek(imageBase64: string): Promise<AIVisionResult | null>
   }
 }
 
-async function callOpenAI(imageBase64: string): Promise<AIVisionResult | null> {
+async function callOpenAI(imageBase64: string, productDescription?: string): Promise<AIVisionResult | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
+
+  const descText = productDescription ? `\nAdditional product info: ${productDescription}` : '';
+  const userText = `Classify this product for customs purposes.${descText}`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -113,7 +119,7 @@ async function callOpenAI(imageBase64: string): Promise<AIVisionResult | null> {
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Classify this product for customs purposes.' },
+              { type: 'text', text: userText },
               { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
             ],
           },
@@ -141,7 +147,7 @@ async function callOpenAI(imageBase64: string): Promise<AIVisionResult | null> {
   }
 }
 
-async function callAnthropic(imageBase64: string): Promise<AIVisionResult | null> {
+async function callAnthropic(imageBase64: string, productDescription?: string): Promise<AIVisionResult | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
@@ -154,6 +160,8 @@ async function callAnthropic(imageBase64: string): Promise<AIVisionResult | null
 
     if (useRelay) {
       // OpenAI-compatible relay format (e.g. api.claudecode.net.cn for China users)
+      const descText = productDescription ? `\nAdditional product info: ${productDescription}` : '';
+      const userText = `Classify this product for customs purposes.${descText}`;
       const url = baseUrl.replace(/\/$/, '') + '/chat/completions';
       const res = await fetch(url, {
         method: 'POST',
@@ -166,7 +174,7 @@ async function callAnthropic(imageBase64: string): Promise<AIVisionResult | null
             {
               role: 'user',
               content: [
-                { type: 'text', text: 'Classify this product for customs purposes.' },
+                { type: 'text', text: userText },
                 { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
               ],
             },
@@ -181,6 +189,8 @@ async function callAnthropic(imageBase64: string): Promise<AIVisionResult | null
       text = json.choices?.[0]?.message?.content || '';
     } else {
       // Native Anthropic format
+      const descTextNative = productDescription ? `\nAdditional product info: ${productDescription}` : '';
+      const userTextNative = `Classify this product for customs purposes.${descTextNative}`;
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -193,7 +203,7 @@ async function callAnthropic(imageBase64: string): Promise<AIVisionResult | null
           max_tokens: 500,
           system: SYSTEM_PROMPT,
           messages: [{ role: 'user', content: [
-            { type: 'text', text: 'Classify this product for customs purposes.' },
+            { type: 'text', text: userTextNative },
             { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
           ] }],
         }),
@@ -220,12 +230,12 @@ async function callAnthropic(imageBase64: string): Promise<AIVisionResult | null
 
 // --- Main exported function ---
 
-export async function analyzeImage(imageBase64: string): Promise<AIVisionResult> {
+export async function analyzeImage(imageBase64: string, productDescription?: string): Promise<AIVisionResult> {
   // Priority chain: Anthropic → DeepSeek → OpenAI → Mock
   const result =
-    (await callAnthropic(imageBase64)) ??
-    (await callDeepSeek(imageBase64)) ??
-    (await callOpenAI(imageBase64));
+    (await callAnthropic(imageBase64, productDescription)) ??
+    (await callDeepSeek(imageBase64, productDescription)) ??
+    (await callOpenAI(imageBase64, productDescription));
 
   if (result) return result;
 

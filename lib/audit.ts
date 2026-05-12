@@ -49,6 +49,9 @@ export interface AuditReport {
   restricted: boolean;
   conditions: string;
   taxRebate: number | null;
+  suggestedPrice: number;
+  shipmentRecommended: boolean;
+  shipmentReason: string;
   overallRisk: 'low' | 'medium' | 'high';
   suggestedDeclaration: string;
   dataSource: string;
@@ -215,6 +218,20 @@ export function generateAuditReport(
   const grandUs = Math.round((declaredValue * quantity + shipping + usDuty + euVat) * 100) / 100;
   const grandEu = Math.round((declaredValue * quantity + shipping + euDuty + euVat) * 100) / 100;
 
+  // Suggested retail price
+  const baseCost = declaredValue * quantity + shipping;
+  const markupMultiplier = overallRisk === 'high' ? 2.5 : overallRisk === 'medium' ? 2.0 : 1.5;
+  const suggestedPrice = Math.round((baseCost + usDuty + euDuty + euVat) * markupMultiplier * 100) / 100;
+
+  // Shipment recommendation
+  const hasChinaTariff = isChina && (section301rate > 0 || usDuty > 10);
+  const shipmentRecommended = !hasChinaTariff && !compliance.battery && !compliance.dangerous;
+  const shipmentReason = hasChinaTariff
+    ? '中国原产商品受 T86 取消及/或 Section 301 附加关税影响。建议：1) 分批次小包裹发货 2) 考虑第三国中转仓转口 3) 评估产地多元化策略。'
+    : compliance.battery || compliance.dangerous
+      ? '含电池/危险品，运输受限。需使用特定物流渠道并提供 MSDS/UN38.3 报告。'
+      : '当前产地无额外关税运输限制，可直接发运。';
+
   return {
     productName,
     material,
@@ -252,6 +269,9 @@ export function generateAuditReport(
     restricted,
     conditions: dbItem?.conditions ?? '',
     taxRebate: dbItem?.tax_rebate ?? null,
+    suggestedPrice,
+    shipmentRecommended,
+    shipmentReason,
     overallRisk,
     suggestedDeclaration,
     dataSource: 'GlobalGuard 本地数据库',

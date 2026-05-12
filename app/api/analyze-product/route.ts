@@ -10,6 +10,7 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 export async function POST(request: NextRequest) {
   try {
     let imageBase64: string;
+    let productDescription: string | undefined;
     let declaredValue = 50;
     let originCountry = 'china';
     let euCountry: string | undefined;
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
     if (contentType.includes('application/json')) {
       const body = await request.json();
       imageBase64 = body.image;
+      productDescription = body.productDescription || undefined;
       declaredValue = Math.max(1, Math.min(9999, Number(body.declaredValue) || 50));
       originCountry = body.originCountry || 'china';
       euCountry = body.euCountry || undefined;
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No image data provided' }, { status: 400 });
     }
 
-    const visionResult = await analyzeImage(imageBase64);
+    const visionResult = await analyzeImage(imageBase64, productDescription);
 
     // Search local DB with external fallback (USITC API → web scrape → mock)
     const search = await searchWithFallback(
