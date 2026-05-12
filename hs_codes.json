@@ -1,231 +1,106 @@
 {
   "metadata": {
     "source": "GlobalGuard AI Sample Database",
-    "version": "1.0",
-    "last_updated": "2026-05-12"
+    "version": "1.1",
+    "last_updated": "2026-05-12",
+    "total_entries": 52
   },
   "categories": {
     "electronics": {
       "description": "电子产品及配件",
       "items": [
-        {
-          "hs_code": "847130",
-          "description": "便携式自动数据处理设备（重量≤10kg，如笔记本、平板）",
-          "material": "塑料/金属/电子元件",
-          "usage": "数据处理",
-          "base_tariff_us": 0,
-          "base_tariff_eu": 0,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        },
-        {
-          "hs_code": "851712",
-          "description": "智能手机",
-          "material": "玻璃/金属/电子元件",
-          "usage": "通讯",
-          "base_tariff_us": 0,
-          "base_tariff_eu": 0,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        },
-        {
-          "hs_code": "851830",
-          "description": "耳机及耳塞（包括蓝牙耳机）",
-          "material": "塑料/电子元件",
-          "usage": "音频输出",
-          "base_tariff_us": 0,
-          "base_tariff_eu": 0,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.1
-        },
-        {
-          "hs_code": "852351",
-          "description": "固态存储设备（U盘、SSD等）",
-          "material": "塑料/电子元件",
-          "usage": "数据存储",
-          "base_tariff_us": 0,
-          "base_tariff_eu": 0,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        },
-        {
-          "hs_code": "854442",
-          "description": "电线及电缆（用于电压≤1000V）",
-          "material": "铜/塑料/橡胶",
-          "usage": "电力传输",
-          "base_tariff_us": 2.5,
-          "base_tariff_eu": 2.5,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        }
+        { "hs_code": "847130", "description": "便携式自动数据处理设备（重量≤10kg，如笔记本、平板）", "material": "塑料/金属/电子元件", "usage": "数据处理", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "851712", "description": "智能手机", "material": "玻璃/金属/电子元件", "usage": "通讯", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "851830", "description": "耳机及耳塞（包括蓝牙耳机、头戴式耳机）", "material": "塑料/电子元件", "usage": "音频输出", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.1 },
+        { "hs_code": "852351", "description": "固态存储设备（U盘、SSD存储卡等）", "material": "塑料/电子元件", "usage": "数据存储", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "854442", "description": "电线及电缆（用于电压≤1000V）", "material": "铜/塑料/橡胶", "usage": "电力传输", "base_tariff_us": 2.5, "base_tariff_eu": 2.5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "851762", "description": "通信设备（路由器、交换机、蓝牙设备）", "material": "塑料/电子元件", "usage": "网络通信", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "852871", "description": "电视接收机顶盒（含网络电视盒子）", "material": "塑料/电子元件", "usage": "视频播放", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "950450", "description": "视频游戏控制器及设备（任天堂Switch等）", "material": "塑料/电子元件", "usage": "娱乐", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "910211", "description": "手表（电动驱动，带机械显示）", "material": "金属/玻璃/塑料", "usage": "计时", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 }
       ]
     },
     "textiles": {
       "description": "纺织品及服装",
       "items": [
-        {
-          "hs_code": "610910",
-          "description": "棉制T恤（针织或钩编）",
-          "material": "棉",
-          "usage": "服装",
-          "base_tariff_us": 12,
-          "base_tariff_eu": 12,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        },
-        {
-          "hs_code": "620462",
-          "description": "棉制长裤（非针织）",
-          "material": "棉",
-          "usage": "服装",
-          "base_tariff_us": 12,
-          "base_tariff_eu": 12,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        },
-        {
-          "hs_code": "640399",
-          "description": "橡胶/塑料外底及皮革/纺织面料鞋类",
-          "material": "橡胶/皮革/纺织物",
-          "usage": "鞋类",
-          "base_tariff_us": 8,
-          "base_tariff_eu": 8,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        },
-        {
-          "hs_code": "621210",
-          "description": "胸罩（纺织材料）",
-          "material": "纺织物",
-          "usage": "服装",
-          "base_tariff_us": 12,
-          "base_tariff_eu": 12,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        }
+        { "hs_code": "610910", "description": "棉制T恤（针织或钩编）", "material": "棉", "usage": "服装", "base_tariff_us": 12, "base_tariff_eu": 12, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "620462", "description": "棉制长裤（非针织）", "material": "棉", "usage": "服装", "base_tariff_us": 12, "base_tariff_eu": 12, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "640399", "description": "橡胶/塑料外底及皮革/纺织面料鞋类", "material": "橡胶/皮革/纺织物", "usage": "鞋类", "base_tariff_us": 8, "base_tariff_eu": 8, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "621210", "description": "胸罩（纺织材料）", "material": "纺织物", "usage": "服装", "base_tariff_us": 12, "base_tariff_eu": 12, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "611020", "description": "棉制针织套头衫、开襟衫、背心", "material": "棉", "usage": "服装", "base_tariff_us": 12, "base_tariff_eu": 12, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "620520", "description": "棉制男衬衫（非针织）", "material": "棉", "usage": "服装", "base_tariff_us": 12, "base_tariff_eu": 12, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "630790", "description": "其他纺织制成品（口罩、抹布等）", "material": "纺织物", "usage": "家用", "base_tariff_us": 7, "base_tariff_eu": 7, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "420222", "description": "塑料或纺织材料制手提包", "material": "塑料/纺织物", "usage": "携带物品", "base_tariff_us": 8, "base_tariff_eu": 8, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 }
       ]
     },
     "home_goods": {
       "description": "家居用品",
       "items": [
-        {
-          "hs_code": "691110",
-          "description": "瓷制餐具及厨房用具",
-          "material": "陶瓷",
-          "usage": "餐饮",
-          "base_tariff_us": 8,
-          "base_tariff_eu": 8,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        },
-        {
-          "hs_code": "732393",
-          "description": "不锈钢制餐桌及厨房用具",
-          "material": "不锈钢",
-          "usage": "餐饮",
-          "base_tariff_us": 4,
-          "base_tariff_eu": 4,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        },
-        {
-          "hs_code": "940360",
-          "description": "木制家具",
-          "material": "木材",
-          "usage": "家具",
-          "base_tariff_us": 0,
-          "base_tariff_eu": 0,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        },
-        {
-          "hs_code": "630260",
-          "description": "盥洗及厨房用棉制毛巾织物",
-          "material": "棉",
-          "usage": "家用纺织品",
-          "base_tariff_us": 8,
-          "base_tariff_eu": 8,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.075
-        }
+        { "hs_code": "691110", "description": "瓷制餐具及厨房用具", "material": "陶瓷", "usage": "餐饮", "base_tariff_us": 8, "base_tariff_eu": 8, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "732393", "description": "不锈钢制餐桌及厨房用具", "material": "不锈钢", "usage": "餐饮", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "940360", "description": "木制家具", "material": "木材", "usage": "家具", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "630260", "description": "盥洗及厨房用棉制毛巾织物", "material": "棉", "usage": "家用纺织品", "base_tariff_us": 8, "base_tariff_eu": 8, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "940490", "description": "床上用品（枕头、被子、床垫保护垫）", "material": "纺织物/羽毛/化纤", "usage": "睡眠", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "701328", "description": "玻璃杯（餐桌用）", "material": "玻璃", "usage": "餐饮", "base_tariff_us": 6, "base_tariff_eu": 6, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "392490", "description": "塑料制家用盥洗及厨房用具", "material": "塑料", "usage": "家用", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 }
       ]
     },
     "toys": {
       "description": "玩具及运动用品",
       "items": [
-        {
-          "hs_code": "950300",
-          "description": "玩具（玩偶、模型等）",
-          "material": "塑料/纺织物/电子元件",
-          "usage": "娱乐",
-          "base_tariff_us": 0,
-          "base_tariff_eu": 4.7,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        },
-        {
-          "hs_code": "950691",
-          "description": "健身及体育用品",
-          "material": "金属/塑料/橡胶",
-          "usage": "运动",
-          "base_tariff_us": 3,
-          "base_tariff_eu": 3,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        }
+        { "hs_code": "950300", "description": "玩具（玩偶、模型、玩具车等）", "material": "塑料/纺织物/电子元件", "usage": "娱乐", "base_tariff_us": 0, "base_tariff_eu": 4.7, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "950691", "description": "健身及体育用品（哑铃、瑜伽垫等）", "material": "金属/塑料/橡胶", "usage": "运动", "base_tariff_us": 3, "base_tariff_eu": 3, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "950490", "description": "桌面游戏、纸牌游戏设备", "material": "纸板/塑料", "usage": "娱乐", "base_tariff_us": 0, "base_tariff_eu": 2.5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 }
       ]
     },
     "beauty": {
       "description": "美妆及个护",
       "items": [
-        {
-          "hs_code": "330499",
-          "description": "其他美容或化妆品制剂",
-          "material": "化工品",
-          "usage": "美容",
-          "base_tariff_us": 5,
-          "base_tariff_eu": 5,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        },
-        {
-          "hs_code": "330300",
-          "description": "香水和花露水",
-          "material": "化工品/酒精",
-          "usage": "美容",
-          "base_tariff_us": 5,
-          "base_tariff_eu": 5,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0.05
-        },
-        {
-          "hs_code": "961900",
-          "description": "卫生巾及尿布",
-          "material": "纸浆/高分子材料",
-          "usage": "卫生用品",
-          "base_tariff_us": 0,
-          "base_tariff_eu": 0,
-          "vat_eu": 20,
-          "restricted": false,
-          "section_301_tariff": 0
-        }
+        { "hs_code": "330499", "description": "其他美容或化妆品制剂（面霜、乳液等）", "material": "化工品", "usage": "美容", "base_tariff_us": 5, "base_tariff_eu": 5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "330300", "description": "香水和花露水", "material": "化工品/酒精", "usage": "美容", "base_tariff_us": 5, "base_tariff_eu": 5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "961900", "description": "卫生巾及尿布", "material": "纸浆/高分子材料", "usage": "卫生用品", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0 },
+        { "hs_code": "330420", "description": "眼部化妆用品（眼影、眼线、睫毛膏）", "material": "化工品", "usage": "美容", "base_tariff_us": 5, "base_tariff_eu": 5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "821420", "description": "修指甲及修脚用具（指甲钳、锉刀等）", "material": "金属/塑料", "usage": "个人护理", "base_tariff_us": 3, "base_tariff_eu": 3, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 }
+      ]
+    },
+    "machinery": {
+      "description": "机械设备及配件",
+      "items": [
+        { "hs_code": "841480", "description": "空气泵、真空泵及压缩机", "material": "金属/电子元件", "usage": "气体压缩", "base_tariff_us": 2, "base_tariff_eu": 2, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "846729", "description": "手提电动工具（电钻、角磨机等）", "material": "金属/塑料/电子元件", "usage": "加工", "base_tariff_us": 2.5, "base_tariff_eu": 2.5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "847989", "description": "其他未列名机器及机械器具", "material": "金属/电子元件", "usage": "工业加工", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "848180", "description": "阀门、水龙头及类似用具", "material": "金属/塑料", "usage": "流体控制", "base_tariff_us": 3, "base_tariff_eu": 3, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "842010", "description": "熨烫及类似机器", "material": "金属/塑料", "usage": "衣物护理", "base_tariff_us": 2, "base_tariff_eu": 2, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "853710", "description": "电压≤1000V的电气控制装置（配电箱、控制器）", "material": "金属/塑料/电子元件", "usage": "电气控制", "base_tariff_us": 2, "base_tariff_eu": 2, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 }
+      ]
+    },
+    "food": {
+      "description": "食品及农产品",
+      "items": [
+        { "hs_code": "090210", "description": "绿茶（内包装≤3kg）", "material": "茶叶", "usage": "饮用", "base_tariff_us": 0, "base_tariff_eu": 0, "vat_eu": 20, "restricted": false, "section_301_tariff": 0 },
+        { "hs_code": "210690", "description": "其他未列名食品（保健品、代餐等）", "material": "食品原料", "usage": "食用", "base_tariff_us": 6, "base_tariff_eu": 6, "vat_eu": 20, "restricted": false, "section_301_tariff": 0 },
+        { "hs_code": "200819", "description": "坚果及种子制品（炒货、坚果零食）", "material": "坚果/调味料", "usage": "食用", "base_tariff_us": 7, "base_tariff_eu": 7, "vat_eu": 20, "restricted": false, "section_301_tariff": 0 },
+        { "hs_code": "190531", "description": "甜饼干（含加糖）", "material": "面粉/糖/油脂", "usage": "食用", "base_tariff_us": 5, "base_tariff_eu": 5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0 },
+        { "hs_code": "160232", "description": "鸡禽肉制品（罐头、即食）", "material": "禽肉/调味料", "usage": "食用", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0 }
+      ]
+    },
+    "chemicals": {
+      "description": "化工及塑料制品",
+      "items": [
+        { "hs_code": "392690", "description": "其他塑料制品（塑料配件、收纳盒等）", "material": "塑料", "usage": "家用/工业", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "380891", "description": "杀虫剂及类似产品（家用驱蚊器等）", "material": "化工品", "usage": "杀虫", "base_tariff_us": 5, "base_tariff_eu": 5, "vat_eu": 20, "restricted": true, "section_301_tariff": 0.05 },
+        { "hs_code": "340130", "description": "表面活性剂制品（洗面奶、沐浴露）", "material": "化工品", "usage": "清洁", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "381400", "description": "有机复合溶剂及稀释剂", "material": "化工品", "usage": "工业", "base_tariff_us": 5, "base_tariff_eu": 5, "vat_eu": 20, "restricted": true, "section_301_tariff": 0.05 }
+      ]
+    },
+    "footwear": {
+      "description": "鞋类及皮革制品",
+      "items": [
+        { "hs_code": "640419", "description": "纺织面料鞋（运动鞋、帆布鞋）", "material": "纺织物/橡胶/塑料", "usage": "鞋类", "base_tariff_us": 8, "base_tariff_eu": 8, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "640299", "description": "橡胶或塑料制鞋类（凉鞋、拖鞋）", "material": "橡胶/塑料", "usage": "鞋类", "base_tariff_us": 6, "base_tariff_eu": 6, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 },
+        { "hs_code": "420310", "description": "皮革制服装（皮衣、皮夹克）", "material": "皮革", "usage": "服装", "base_tariff_us": 6, "base_tariff_eu": 6, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "420231", "description": "皮革制钱包、钥匙包等小皮件", "material": "皮革", "usage": "携带物品", "base_tariff_us": 5, "base_tariff_eu": 5, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.05 },
+        { "hs_code": "640610", "description": "鞋面及鞋部件", "material": "皮革/纺织物", "usage": "鞋类生产", "base_tariff_us": 4, "base_tariff_eu": 4, "vat_eu": 20, "restricted": false, "section_301_tariff": 0.075 }
       ]
     }
   }

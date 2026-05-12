@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeImage } from '@/lib/ai';
-import { searchByKeywords } from '@/lib/hs-codes';
+import { findByHsCode, searchWithFallback } from '@/lib/hs-codes';
 import { generateAuditReport } from '@/lib/audit';
+import { getAuthUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   try {
     let imageBase64: string;
+    let declaredValue = 50;
+    let originCountry = 'china';
+
     const contentType = request.headers.get('content-type') || '';
 
     if (contentType.includes('application/json')) {
       const body = await request.json();
       imageBase64 = body.image;
+      declaredValue = Math.max(1, Math.min(9999, Number(body.declaredValue) || 50));
+      originCountry = body.originCountry || 'china';
     } else if (contentType.includes('multipart/form-data')) {
       const form = await request.formData();
       const file = form.get('image') as File | null;
@@ -37,36 +44,63 @@ export async function POST(request: NextRequest) {
 
     const visionResult = await analyzeImage(imageBase64);
 
-    const keywords = [
+    // Search local DB with external fallback (USITC API → web scrape → mock)
+    const search = await searchWithFallback(
       visionResult.productName,
       visionResult.material,
       visionResult.usage,
-      ...visionResult.suggestedHsCodes.map((h) => h.code),
-    ];
-    const matchedItems = searchByKeywords(keywords);
+      visionResult.suggestedHsCodes.map((h) => h.code),
+    );
 
     const enriched = visionResult.suggestedHsCodes.map((suggestion) => {
-      const dbMatch = matchedItems.find((m) => m.hs_code === suggestion.code);
+      const dbMatch = findByHsCode(suggestion.code);
       return dbMatch
         ? { ...suggestion, tariffUs: dbMatch.base_tariff_us, tariffEu: dbMatch.base_tariff_eu, restricted: dbMatch.restricted }
         : suggestion;
     });
 
-    // Generate compliance audit for top HS code
     const topCode = enriched[0]?.code || '847130';
     const audit = generateAuditReport(
       visionResult.productName,
       visionResult.material,
       visionResult.usage,
       topCode,
+      visionResult.suggestedDeclaration,
+      visionResult.hsDescription,
+      declaredValue,
+      1,
+      originCountry,
     );
+
+    // Auto-save to audit history if user is logged in
+    try {
+      const user = await getAuthUser();
+      if (user) {
+        await prisma.auditRecord.create({
+          data: {
+            userId: user.userId,
+            productName: audit.productName,
+            hsCode: audit.selectedHsCode,
+            riskLevel: audit.overallRisk,
+            report: JSON.stringify(audit),
+          },
+        });
+      }
+    } catch (dbErr) {
+      console.warn('[analyze-product] failed to save audit record:', dbErr);
+    }
 
     return NextResponse.json({
       productName: visionResult.productName,
       material: visionResult.material,
       usage: visionResult.usage,
       suggestedHsCodes: enriched,
-      localMatches: matchedItems.slice(0, 5),
+      localMatches: search.local.slice(0, 5),
+      externalMatches: search.external,
+      usedExternalFallback: search.usedFallback,
+      fallbackSource: search.source,
+      demoMode: visionResult.demoMode,
+      demoReason: visionResult.demoReason,
       audit,
     });
   } catch (error) {

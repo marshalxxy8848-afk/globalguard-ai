@@ -37,8 +37,11 @@ export function generateAuditReport(
   material: string,
   usage: string,
   hsCode: string,
-  declaredValue: number = 50, // default $50
+  aiDeclaration?: string,
+  aiHsDescription?: string,
+  declaredValue: number = 50,
   quantity: number = 1,
+  originCountry: string = 'china',
 ): AuditReport {
   const dbItem = findByHsCode(hsCode);
   const warnings: string[] = [];
@@ -47,13 +50,16 @@ export function generateAuditReport(
   const usAdValorem = declaredValue * quantity * US_AD_VALOREM;
   const usFlatRate = US_FLAT_RATE * quantity;
   const usDuty = Math.max(usAdValorem, usFlatRate);
-  const usDutySource = usAdValorem >= usFlatRate ? '30% ad valorem' : '$25 fixed rate';
+  const usDutySource = usAdValorem >= usFlatRate ? '30% 从价税' : '$25 固定费率';
 
-  // T86 impact assessment
+  // T86 impact assessment (China-specific policy)
+  const isChina = originCountry === 'china';
   const t86Impact =
     usDuty > 0
-      ? 'T86 de minimis ($800 exemption) likely revoked for Chinese-origin parcels. Each package now subject to duty.'
-      : 'No immediate T86 impact.';
+      ? (isChina
+          ? 'T86 小额豁免（$800 免税额）已对中国包裹取消，每包裹需缴纳关税。'
+          : `${originCountry === 'vietnam' ? '越南' : originCountry === 'thailand' ? '泰国' : '墨西哥'}暂不受 T86 取消影响（当前仅针对中国包裹）。`)
+      : '无 T86 影响。';
 
   // US risk level
   let usRisk: 'low' | 'medium' | 'high' = 'low';
@@ -74,7 +80,7 @@ export function generateAuditReport(
   // Restricted item check
   const restricted = dbItem?.restricted || false;
   if (restricted) {
-    warnings.push('This HS code category has special restrictions.');
+    warnings.push('该 HS 编码类别存在特殊管制要求，请确认出口许可。');
   }
 
   // Overall risk
@@ -83,17 +89,17 @@ export function generateAuditReport(
   const overallRisk = (['low', 'medium', 'high'] as const)[overallScore];
 
   if (usRisk === 'high' || euRisk === 'high') {
-    warnings.push('High tariff exposure detected — consider HS code optimization or origin-based strategies.');
+    warnings.push('高关税风险 — 建议优化 HS 编码选择或考虑产地策略。');
   }
 
-  // Suggested declaration description
-  const suggestedDeclaration = [
+  // Suggested declaration description (use AI Chinese value when available)
+  const suggestedDeclaration = aiDeclaration ?? [
     productName,
-    material ? `made of ${material}` : '',
-    `for ${usage}`,
+    material ? `由${material}制成` : '',
+    `用于${usage}`,
   ]
     .filter(Boolean)
-    .join(', ')
+    .join('，')
     .slice(0, 120);
 
   return {
@@ -101,11 +107,11 @@ export function generateAuditReport(
     material,
     usage,
     selectedHsCode: hsCode,
-    hsDescription: dbItem?.description || 'General product category',
+    hsDescription: aiHsDescription || dbItem?.description || '通用商品类别',
     us: {
       estimatedDuty: Math.round(usDuty * 100) / 100,
       dutyRate: `${(US_AD_VALOREM * 100).toFixed(0)}% or $${US_FLAT_RATE}/pc`,
-      calculation: `$${declaredValue} × ${US_AD_VALOREM * 100}% = $${usAdValorem.toFixed(2)} vs $${US_FLAT_RATE}/pc flat → using ${usDutySource}`,
+      calculation: `$${declaredValue} × ${US_AD_VALOREM * 100}% = $${usAdValorem.toFixed(2)}，对比 $${US_FLAT_RATE}/件固定费率 → 采用${usDutySource}`,
       t86Impact,
       riskLevel: usRisk,
     },

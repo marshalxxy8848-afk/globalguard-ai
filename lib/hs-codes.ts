@@ -1,4 +1,5 @@
 import hsCodes from '@/hs_codes.json';
+import { searchHsCodeExternal, type ExternalHsResult } from './search-agent';
 
 export interface HsCodeItem {
   hs_code: string;
@@ -59,4 +60,40 @@ export function searchByKeywords(keywords: string[]): CategoryItem[] {
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_KEYWORD_ITEMS)
     .map(({ item }) => item);
+}
+
+// --- External fallback with MCP-style search agent ---
+
+export interface SearchResult {
+  local: CategoryItem[];
+  external: ExternalHsResult[];
+  usedFallback: boolean;
+  source: string;
+}
+
+export async function searchWithFallback(
+  productName: string,
+  material: string,
+  usage: string,
+  suggestedCodes: string[],
+): Promise<SearchResult> {
+  const keywords = [productName, material, usage, ...suggestedCodes];
+  const local = searchByKeywords(keywords);
+
+  // Check if we have a solid local match (2+ hits or any exact code match)
+  const exactMatch = suggestedCodes.some((code) => findByHsCode(code));
+  const hasGoodLocal = local.length >= 2 || exactMatch;
+
+  if (hasGoodLocal) {
+    return { local, external: [], usedFallback: false, source: 'local' };
+  }
+
+  // Trigger external search agent — this calls USITC API → web fallback → mock
+  const external = await searchHsCodeExternal(productName, material, usage);
+  return {
+    local,
+    external: external.results,
+    usedFallback: true,
+    source: external.source,
+  };
 }

@@ -8,7 +8,7 @@
 - 使用小包直邮模式（De Minimis / T86 路径）的商家
 - 需要在发货前快速判断合规风险的运营人员
 
-## 三大 AI Agent 分工
+## 四大 AI Agent 分工
 
 ### 1. 视觉归类代理 (Vision Classifier)
 - 输入：产品图片（Base64 / URL）
@@ -30,6 +30,17 @@
   - 美国：30% 从价税 或 $25/件固定税率（取高者）
   - 欧盟：基础关税 + VAT（假设 20%）
   - 禁运风险：高/中/低
+
+### 4. 实时溯源代理 (Real-time Search Agent) [新增]
+- **输入**：AI 视觉分析产出的产品名称、材质、用途
+- **能力**：当本地 hs_codes.json 数据库匹配不足（< 2 条本地结果或无精确编码匹配）时，自动触发外部溯源
+- **数据源**：
+  - 主路径：美国 USITC HTS API（`hts.usitc.gov/rest/search`）—— 实时查询官方海关编码
+  - 备用路径：爬取欧盟 Access2Markets 官网页面，正则提取 HS 编码
+  - 兜底：Mock 推荐（开发/演示环境）
+- **输出**：外部 HS 编码候选项，标注数据来源（`usitc` / `web` / `mock`）和置信度
+- **缓存**：30 分钟 TTL，避免重复请求
+- **技术**：`lib/search-agent.ts` — 纯 HTTP fetch，类似 MCP fetch 工具的服务器端实现
 
 ## 产品路线图
 - Phase 1: 基础项目 + 数据层
