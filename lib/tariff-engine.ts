@@ -1,5 +1,12 @@
 // --- Tariff Rule Engine ---
-// Multi-country tariff rates, Section 301, T86, VAT, landed cost calculation
+// Multi-country tariff rates with 6-digit → 4-digit → chapter-level fallback
+
+import { lookupHs6, lookupHs4, lookupHs4Rate } from './hs-tariff-data';
+
+/** Get the HS chapter prefix from a 6-digit HS code */
+function getHsChapter(hsCode: string): string {
+  return hsCode.replace(/\D/g, '').slice(0, 2);
+}
 
 export type CountryCode = 'china' | 'vietnam' | 'thailand' | 'mexico' | 'japan' | 'korea';
 
@@ -27,6 +34,7 @@ export interface TariffResult {
   t86Qualifies: boolean;
   t86Note: string;
   riskLevel: 'low' | 'medium' | 'high';
+  matchLevel: '6-digit' | '4-digit' | 'chapter';
 }
 
 export interface EuTariffResult {
@@ -37,108 +45,74 @@ export interface EuTariffResult {
   vatRate: number;
   calculation: string;
   riskLevel: 'low' | 'medium' | 'high';
+  matchLevel: '6-digit' | '4-digit' | 'chapter';
 }
 
-// === US Tariff Database ===
-// Key HS chapters covering 90%+ of cross-border e-commerce goods
+// === US Tariff Database (chapter-level fallback) ===
 
 interface UsTariffEntry {
   chapterStart: string;
   chapterEnd: string;
   description: string;
-  rateGeneral: number;    // Column 1 general (ad valorem)
-  rateSpecial: number;    // Column 1 special (FTA countries)
-  specific: number;       // Specific rate ($/unit)
-  specificUnit: string;   // 'kg' | 'pair' | 'dozen' | 'unit' | ''
-  section301: number;     // Additional Section 301 rate for China
+  rateGeneral: number;
+  rateSpecial: number;
+  specific: number;
+  specificUnit: string;
+  section301: number;
   notes: string;
 }
 
 const US_TARIFF_TABLE: UsTariffEntry[] = [
-  // Chapter 2: Meat
   { chapterStart: '02', chapterEnd: '02', description: '肉类', rateGeneral: 0.26, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 3: Fish
   { chapterStart: '03', chapterEnd: '03', description: '水产品', rateGeneral: 0.06, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 7: Vegetables
   { chapterStart: '07', chapterEnd: '07', description: '蔬菜', rateGeneral: 0.08, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 8: Fruit
   { chapterStart: '08', chapterEnd: '08', description: '水果', rateGeneral: 0.05, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 9: Coffee/Tea
   { chapterStart: '09', chapterEnd: '09', description: '咖啡茶香料', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 16: Prepared food
   { chapterStart: '16', chapterEnd: '16', description: '加工食品', rateGeneral: 0.07, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 20: Food preparations
   { chapterStart: '20', chapterEnd: '20', description: '食品制品', rateGeneral: 0.06, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 25: Salt/sulfur
   { chapterStart: '25', chapterEnd: '25', description: '矿产品', rateGeneral: 0.02, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 28: Inorganic chemicals
   { chapterStart: '28', chapterEnd: '28', description: '无机化学品', rateGeneral: 0.04, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 29: Organic chemicals
   { chapterStart: '29', chapterEnd: '29', description: '有机化学品', rateGeneral: 0.05, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 30: Pharma
   { chapterStart: '30', chapterEnd: '30', description: '药品', rateGeneral: 0, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0, notes: '零关税 — 人道主义商品' },
-  // Chapter 33: Essential oils/cosmetics
   { chapterStart: '33', chapterEnd: '33', description: '精油及化妆品', rateGeneral: 0.05, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 34: Soap/detergent
   { chapterStart: '34', chapterEnd: '34', description: '肥皂洗涤剂', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 38: Chemical products
   { chapterStart: '38', chapterEnd: '38', description: '杂项化学品', rateGeneral: 0.04, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 39: Plastics
   { chapterStart: '39', chapterEnd: '40', description: '塑料及橡胶制品', rateGeneral: 0.05, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 42: Leather goods
   { chapterStart: '42', chapterEnd: '42', description: '皮革制品（箱包）', rateGeneral: 0.08, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '高 IP 风险类别' },
-  // Chapter 43: Fur
   { chapterStart: '43', chapterEnd: '43', description: '毛皮制品', rateGeneral: 0.06, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 44: Wood
   { chapterStart: '44', chapterEnd: '46', description: '木及木制品', rateGeneral: 0.04, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 48: Paper
   { chapterStart: '48', chapterEnd: '49', description: '纸及纸制品', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 50-63: Textiles (varies widely)
   { chapterStart: '50', chapterEnd: '55', description: '纺织原料及面料', rateGeneral: 0.08, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '关税范围 5-32%，此为平均值' },
   { chapterStart: '56', chapterEnd: '60', description: '特种织物', rateGeneral: 0.08, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
   { chapterStart: '61', chapterEnd: '62', description: '服装', rateGeneral: 0.16, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '关税范围 6-32%' },
   { chapterStart: '63', chapterEnd: '63', description: '其他纺织制品', rateGeneral: 0.07, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 64: Footwear
   { chapterStart: '64', chapterEnd: '64', description: '鞋类', rateGeneral: 0.12, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '关税范围 0-48%，高 IP 风险' },
-  // Chapter 65: Headgear
   { chapterStart: '65', chapterEnd: '65', description: '帽类', rateGeneral: 0.06, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 68-70: Stone/glass
   { chapterStart: '68', chapterEnd: '70', description: '石料陶瓷玻璃制品', rateGeneral: 0.05, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 71: Jewelry
   { chapterStart: '71', chapterEnd: '71', description: '珠宝首饰', rateGeneral: 0.06, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '银饰 13.5%，金饰 0%' },
-  // Chapter 72-83: Base metals
   { chapterStart: '72', chapterEnd: '73', description: '钢铁制品', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
   { chapterStart: '74', chapterEnd: '81', description: '其他金属制品', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
   { chapterStart: '82', chapterEnd: '83', description: '金属工具及器具', rateGeneral: 0.04, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 84-85: Machinery/Electronics
   { chapterStart: '84', chapterEnd: '84', description: '机械设备', rateGeneral: 0.02, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '多数 0-4%' },
   { chapterStart: '85', chapterEnd: '85', description: '电机电气设备', rateGeneral: 0.02, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '含耳机/蓝牙/充电器等' },
-  // Chapter 86-89: Transportation
   { chapterStart: '86', chapterEnd: '86', description: '铁道车辆', rateGeneral: 0.02, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
   { chapterStart: '87', chapterEnd: '87', description: '车辆（非铁道）', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '自行车 0-11%' },
-  // Chapter 90: Optical/medical
   { chapterStart: '90', chapterEnd: '90', description: '光学医疗仪器', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 91: Clocks/watches
   { chapterStart: '91', chapterEnd: '91', description: '钟表', rateGeneral: 0.05, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.075, notes: '' },
-  // Chapter 92: Musical instruments
   { chapterStart: '92', chapterEnd: '92', description: '乐器', rateGeneral: 0.04, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 94: Furniture
   { chapterStart: '94', chapterEnd: '94', description: '家具及照明', rateGeneral: 0.03, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '' },
-  // Chapter 95: Toys/sports
   { chapterStart: '95', chapterEnd: '95', description: '玩具及体育用品', rateGeneral: 0.04, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '含儿童用品 CE 要求' },
-  // Chapter 96: Misc manufactured
   { chapterStart: '96', chapterEnd: '96', description: '杂项制品', rateGeneral: 0.04, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0.25, notes: '含笔/伞/拉链等' },
-  // Chapter 97: Art/antiques
   { chapterStart: '97', chapterEnd: '97', description: '艺术品', rateGeneral: 0, rateSpecial: 0, specific: 0, specificUnit: '', section301: 0, notes: '零关税' },
 ];
 
-// === EU TARIC Rates ===
+// === EU TARIC Rates (chapter-level fallback) ===
 
 interface EuTariffEntry {
   chapterStart: string;
   chapterEnd: string;
   description: string;
-  rate: number;       // Ad valorem duty rate
+  rate: number;
   notes: string;
 }
 
@@ -184,38 +158,68 @@ export const SHIPPING_ESTIMATES: Record<string, number> = {
 
 // === Helper functions ===
 
-/** Get the HS chapter prefix from a 6-digit HS code */
-export function getHsChapter(hsCode: string): string {
-  return hsCode.replace(/\D/g, '').slice(0, 2);
-}
-
 /** Check if a chapter number falls within a chapter range */
 function chapterInRange(chapter: string, start: string, end: string): boolean {
   return chapter >= start && chapter <= end;
 }
 
-/** Look up US tariff rate by HS code */
+/**
+ * Multi-level US tariff lookup:
+ * 1. Try exact 6-digit match in comprehensive database
+ * 2. Try 4-digit heading match
+ * 3. Fall back to chapter-level table
+ */
 export function lookupUsTariff(hsCode: string, originCountry: string, declaredValue: number, quantity: number = 1): TariffResult {
   const chapter = getHsChapter(hsCode);
-  const entry = US_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
-
   const isChina = originCountry === 'china';
-  const baseRate = entry?.rateGeneral ?? 0.03;
-  const section301Rate = (isChina && entry?.section301) ? entry.section301 : 0;
-  const specificRate = entry?.specific ?? 0;
-  const specificUnit = entry?.specificUnit || '';
+
+  // Extract 4-digit and 6-digit codes for precise lookup
+  const cleanCode = hsCode.replace(/\D/g, '').slice(0, 6);
+  const code6 = cleanCode.length === 6 ? cleanCode : cleanCode.padEnd(6, '0');
+  const code4 = code6.slice(0, 4);
+
+  let matchLevel: '6-digit' | '4-digit' | 'chapter' = 'chapter';
+  let baseRate: number;
+  let section301Rate: number;
+  let specificRate = 0;
+  let rateNote = '';
+
+  // Level 1: Try 6-digit exact match
+  const entry6 = lookupHs6(code6);
+  if (entry6) {
+    baseRate = entry6.usRate;
+    section301Rate = isChina ? entry6.section301 : 0;
+    matchLevel = '6-digit';
+    rateNote = `6位编码 ${code6} 精确匹配`;
+  } else {
+    // Level 2: Try 4-digit heading match (use representative rate)
+    const entry4 = lookupHs4Rate(code4);
+    if (entry4) {
+      baseRate = entry4.usRate;
+      section301Rate = isChina ? entry4.section301 : 0;
+      matchLevel = '4-digit';
+      rateNote = `4位品目 ${code4} 品目匹配`;
+    } else {
+      // Level 3: Fall back to chapter-level
+      const chapterEntry = US_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
+      baseRate = chapterEntry?.rateGeneral ?? 0.03;
+      section301Rate = (isChina && chapterEntry?.section301) ? chapterEntry.section301 : 0;
+      specificRate = chapterEntry?.specific ?? 0;
+      matchLevel = 'chapter';
+      rateNote = `章节 ${chapter} 近似匹配`;
+    }
+  }
 
   // Ad valorem calculation
   const adValoremAmount = declaredValue * quantity * baseRate;
 
-  // Specific rate calculation
+  // Specific rate calculation (only at chapter level)
   const specificAmount = specificRate * quantity;
 
   // Section 301 additional
   const section301Amount = declaredValue * quantity * section301Rate;
 
-  // Total duty (max of ad valorem vs specific, plus Section 301)
-  // Simplified: most e-commerce goods use ad valorem only
+  // Total duty
   const baseDuty = adValoremAmount + specificAmount;
   const totalDuty = baseDuty + section301Amount;
 
@@ -230,11 +234,12 @@ export function lookupUsTariff(hsCode: string, originCountry: string, declaredVa
   // Rate display
   const parts: string[] = [];
   if (baseRate > 0) parts.push(`${(baseRate * 100).toFixed(1)}%`);
-  if (specificRate > 0) parts.push(`$${specificRate}/${specificUnit || '件'}`);
+  if (specificRate > 0) parts.push(`$${specificRate}/件`);
   if (section301Rate > 0) parts.push(`+301 ${(section301Rate * 100).toFixed(1)}%`);
 
   // Calculation
   const calcParts: string[] = [];
+  calcParts.push(`[${matchLevel}] ${rateNote}`);
   if (baseRate > 0) calcParts.push(`$${declaredValue} × ${(baseRate * 100).toFixed(1)}% = $${(adValoremAmount).toFixed(2)}`);
   if (section301Rate > 0) calcParts.push(`301: $${declaredValue} × ${(section301Rate * 100).toFixed(1)}% = $${section301Amount.toFixed(2)}`);
 
@@ -254,16 +259,46 @@ export function lookupUsTariff(hsCode: string, originCountry: string, declaredVa
     t86Qualifies,
     t86Note,
     riskLevel,
+    matchLevel,
   };
 }
 
-/** Look up EU tariff rate by HS code */
+/**
+ * Multi-level EU tariff lookup:
+ * 1. Try exact 6-digit match
+ * 2. Try 4-digit heading match
+ * 3. Fall back to chapter-level table
+ */
 export function lookupEuTariff(hsCode: string, declaredValue: number, euCountry?: string, quantity: number = 1): EuTariffResult {
   const { getEuVatRate } = require('./eu-vat');
   const chapter = getHsChapter(hsCode);
-  const entry = EU_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
 
-  const dutyRate = entry?.rate ?? 0.03;
+  const cleanCode = hsCode.replace(/\D/g, '').slice(0, 6);
+  const code6 = cleanCode.length === 6 ? cleanCode : cleanCode.padEnd(6, '0');
+  const code4 = code6.slice(0, 4);
+
+  let matchLevel: '6-digit' | '4-digit' | 'chapter' = 'chapter';
+  let dutyRate: number;
+
+  // Level 1: Try 6-digit exact match
+  const entry6 = lookupHs6(code6);
+  if (entry6) {
+    dutyRate = entry6.euRate;
+    matchLevel = '6-digit';
+  } else {
+    // Level 2: Try 4-digit heading match
+    const entry4 = lookupHs4Rate(code4);
+    if (entry4) {
+      dutyRate = entry4.euRate;
+      matchLevel = '4-digit';
+    } else {
+      // Level 3: Fall back to chapter
+      const entry = EU_TARIFF_TABLE.find((e) => chapterInRange(chapter, e.chapterStart, e.chapterEnd));
+      dutyRate = entry?.rate ?? 0.03;
+      matchLevel = 'chapter';
+    }
+  }
+
   const vatRate = getEuVatRate(euCountry);
 
   const duty = declaredValue * quantity * dutyRate;
@@ -280,8 +315,9 @@ export function lookupEuTariff(hsCode: string, declaredValue: number, euCountry?
     total: Math.round(total * 100) / 100,
     dutyRate: `${(dutyRate * 100).toFixed(1)}%`,
     vatRate: Math.round(vatRate * 100 * 10) / 10,
-    calculation: `关税: $${declaredValue} × ${(dutyRate * 100).toFixed(1)}% = $${duty.toFixed(2)}; VAT: ($${declaredValue} + $${duty.toFixed(2)}) × ${(vatRate * 100).toFixed(1)}% = $${vat.toFixed(2)}`,
+    calculation: `[${matchLevel}] 关税: $${declaredValue} × ${(dutyRate * 100).toFixed(1)}% = $${duty.toFixed(2)}; VAT: ($${declaredValue} + $${duty.toFixed(2)}) × ${(vatRate * 100).toFixed(1)}% = $${vat.toFixed(2)}`,
     riskLevel,
+    matchLevel,
   };
 }
 
