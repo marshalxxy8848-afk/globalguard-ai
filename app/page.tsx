@@ -1097,7 +1097,10 @@ export default function Home() {
               {t('hero.subtitle')}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <button id="cta-camera-btn" onClick={() => camRef.current?.click()}
+              <button id="cta-camera-btn" onClick={() => {
+                if (window.innerWidth < 768) { camRef.current?.click(); }
+                else { document.getElementById('upload-zone')?.scrollIntoView({ behavior: 'smooth' }); }
+              }}
                 className="px-8 py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform cursor-pointer touch-manipulation">
                 {t('hero.cta')}
               </button>
@@ -1215,7 +1218,7 @@ export default function Home() {
         </div>
 
         {/* Upload zone */}
-        <div
+        <div id="upload-zone"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
