@@ -1238,7 +1238,7 @@ export default function Home() {
             className="hidden"
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
           />
-          <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
+          <input ref={camRef} type="file" accept="image/*,android/allowCamera" capture="environment" className="hidden"
             onChange={(e) => { e.target.files && handleFiles(e.target.files); }} />
 
           {previews.length > 0 ? (
