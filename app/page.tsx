@@ -1040,42 +1040,12 @@ export default function Home() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showHow, setShowHow] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
-  const [showPicker, setShowPicker] = useState(false);
-  const [camOpen, setCamOpen] = useState(false);
-  const [camImg, setCamImg] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const camInputRef = useRef<HTMLInputElement>(null);
-  const albumInputRef = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }, []);
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }, []);
 
-  // HTTPS: getUserMedia direct camera | HTTP: action sheet fallback
   function startCamera() {
-    if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      setCamImg(null);
-      setCamOpen(true);
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
-        .then(s => { streamRef.current = s; if (videoRef.current) videoRef.current.srcObject = s; })
-        .catch(() => setShowPicker(true));
-    } else {
-      setShowPicker(true);
-    }
-  }
-  function stopCam() { streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null; setCamOpen(false); setCamImg(null); }
-  function snap() {
-    const v = videoRef.current, c = canvasRef.current; if (!v || !c) return;
-    c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext('2d')!.drawImage(v, 0, 0);
-    setCamImg(c.toDataURL('image/jpeg', 0.9));
-  }
-  function useSnap(url: string) {
-    const bin = atob(url.split(',')[1]), buf = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-    handleFiles([new File([buf], 'cam.jpg', { type: 'image/jpeg' })]);
-    stopCam();
+    camRef.current?.click();
   }
 
   const isBusy = status === 'uploading' || status === 'analyzing';
@@ -1267,12 +1237,8 @@ export default function Home() {
             className="hidden"
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
           />
-          <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden"
+          <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
             onChange={(e) => { e.target.files && handleFiles(e.target.files); }} />
-          <input ref={camInputRef} type="file" accept="image/*" capture="environment" className="hidden"
-            onChange={(e) => { e.target.files && handleFiles(e.target.files); setShowPicker(false); }} />
-          <input ref={albumInputRef} type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => { e.target.files && handleFiles(e.target.files); setShowPicker(false); }} />
 
           {previews.length > 0 ? (
             <div className="flex flex-col items-center gap-3">
@@ -1521,59 +1487,6 @@ export default function Home() {
 
 
 
-      {/* Camera viewfinder — HTTPS getUserMedia */}
-      {camOpen && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3">
-            <button onClick={stopCam} className="text-white/70 p-2 cursor-pointer"><svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-            <span className="text-white/50 text-sm">GlobalGuard</span>
-            <div className="w-10" />
-          </div>
-          <div className="flex-1 flex items-center justify-center bg-black">
-            {camImg ? <img src={camImg} className="max-h-full max-w-full object-contain" alt="" />
-              : <video ref={videoRef} autoPlay playsInline className="max-h-full max-w-full object-contain" onLoadedMetadata={() => videoRef.current?.play()} />}
-          </div>
-          <canvas ref={canvasRef} className="hidden" />
-          <div className="flex items-center justify-around px-8 py-6">
-            {camImg ? (
-              <><button onClick={() => setCamImg(null)} className="px-6 py-2 rounded-full border border-white/30 text-white/70 text-sm cursor-pointer">重拍</button>
-                <button onClick={() => useSnap(camImg)} className="px-8 py-2 rounded-full bg-cyan-500 text-white text-sm font-semibold cursor-pointer">使用照片</button></>
-            ) : (
-              <><button onClick={() => albumInputRef.current?.click()} className="flex flex-col items-center gap-1 text-white/50 cursor-pointer">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <span className="text-xs">相册</span></button>
-                <button onClick={snap} className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center cursor-pointer"><div className="w-12 h-12 rounded-full bg-white" /></button>
-                <div className="w-16" /></>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Image picker action sheet */}
-      {showPicker && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-          onClick={() => setShowPicker(false)}
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className="w-full sm:w-80 bg-[#1a1a25] rounded-t-2xl sm:rounded-2xl border border-white/10 p-6 pb-8"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="flex flex-col gap-3">
-              <button onClick={() => camInputRef.current?.click()}
-                className="flex items-center gap-4 w-full px-4 py-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left cursor-pointer">
-                <span className="text-2xl">📷</span>
-                <div><p className="text-sm text-white/80 font-medium">{t('picker.camera')}</p><p className="text-xs text-white/30">{t('picker.camera_desc')}</p></div>
-              </button>
-              <button onClick={() => albumInputRef.current?.click()}
-                className="flex items-center gap-4 w-full px-4 py-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left cursor-pointer">
-                <span className="text-2xl">🖼️</span>
-                <div><p className="text-sm text-white/80 font-medium">{t('picker.gallery')}</p><p className="text-xs text-white/30">{t('picker.gallery_desc')}</p></div>
-              </button>
-              <div className="border-t border-white/10 my-2" />
-              <button onClick={() => setShowPicker(false)}
-                className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm text-white/50 text-center cursor-pointer">{t('picker.cancel')}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <footer className="border-t border-white/5 mt-16">
         <div className="max-w-4xl mx-auto px-4 py-10">
