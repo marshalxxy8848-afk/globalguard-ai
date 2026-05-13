@@ -1044,10 +1044,6 @@ export default function Home() {
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }, []);
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }, []);
 
-  function startCamera() {
-    camRef.current?.click();
-  }
-
   const isBusy = status === 'uploading' || status === 'analyzing';
   const currentReport = selectedHistory ? (selectedHistory.report as AuditReport) : report;
   const batchProgress = files.length > 0 && batchStatus === 'processing' && batchIndex >= 0
@@ -1101,8 +1097,7 @@ export default function Home() {
               {t('hero.subtitle')}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <button id="cta-camera-btn" onClick={startCamera}
-                onPointerDown={(e) => { e.preventDefault(); startCamera(); }}
+              <button id="cta-camera-btn" onClick={() => camRef.current?.click()}
                 className="px-8 py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform cursor-pointer touch-manipulation">
                 {t('hero.cta')}
               </button>
@@ -1237,7 +1232,7 @@ export default function Home() {
             className="hidden"
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
           />
-          <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
+          <input ref={camRef} type="file" accept="image/*" className="hidden"
             onChange={(e) => { e.target.files && handleFiles(e.target.files); }} />
 
           {previews.length > 0 ? (
