@@ -1044,6 +1044,20 @@ export default function Home() {
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }, []);
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }, []);
 
+  function openCamera() {
+    const el = camRef.current;
+    if (!el) return;
+    // On desktop: scroll to upload zone instead of opening file picker
+    if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+      document.getElementById('upload-zone')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    // On mobile: set capture dynamically and trigger native camera
+    el.removeAttribute('capture');
+    el.setAttribute('capture', 'environment');
+    el.click();
+  }
+
   const isBusy = status === 'uploading' || status === 'analyzing';
   const currentReport = selectedHistory ? (selectedHistory.report as AuditReport) : report;
   const batchProgress = files.length > 0 && batchStatus === 'processing' && batchIndex >= 0
@@ -1097,13 +1111,7 @@ export default function Home() {
               {t('hero.subtitle')}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <button id="cta-camera-btn" onClick={() => {
-                if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                  camRef.current?.click();
-                } else {
-                  document.getElementById('upload-zone')?.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
+              <button onClick={openCamera}
                 className="px-8 py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform cursor-pointer touch-manipulation">
                 {t('hero.cta')}
               </button>
@@ -1238,7 +1246,7 @@ export default function Home() {
             className="hidden"
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
           />
-          <input ref={camRef} type="file" accept="image/*,android/allowCamera" capture="environment" className="hidden"
+          <input ref={camRef} type="file" accept="image/*,android/allowCamera" className="hidden"
             onChange={(e) => { e.target.files && handleFiles(e.target.files); }} />
 
           {previews.length > 0 ? (
@@ -1485,6 +1493,7 @@ export default function Home() {
           />
         )}
       </main>
+
 
 
 
