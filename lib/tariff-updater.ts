@@ -64,18 +64,25 @@ interface DataSource {
 
 const DATA_SOURCES: DataSource[] = [
   {
-    name: 'USITC HTS (模拟)',
+    name: 'USITC HTS API',
     country: 'us',
-    url: 'https://hts.usitc.gov/current',
-    refreshIntervalMs: 7 * 24 * 60 * 60 * 1000, // 每周
-    enabled: false, // 无官方免费 API，设为模拟
+    url: 'https://hts.usitc.gov/api/search',
+    refreshIntervalMs: 6 * 60 * 60 * 1000, // 每6小时
+    enabled: true,
   },
   {
-    name: 'EU TARIC (模拟)',
+    name: 'EU TARIC (zolltarifnummern.de)',
     country: 'eu',
-    url: 'https://ec.europa.eu/taxation_customs/dds2/taric/',
-    refreshIntervalMs: 7 * 24 * 60 * 60 * 1000,
-    enabled: false,
+    url: 'https://api.zolltarifnummern.de/api/v2/classification',
+    refreshIntervalMs: 6 * 60 * 60 * 1000,
+    enabled: true,
+  },
+  {
+    name: 'Exchange Rate API',
+    country: 'us',
+    url: 'https://api.exchangerate.host/latest?base=USD',
+    refreshIntervalMs: 24 * 60 * 60 * 1000, // 每日
+    enabled: true,
   },
 ];
 
@@ -149,10 +156,108 @@ export function findFetchedRate(code6: string) {
   return cache.fetched.find((f) => f.code6 === code6);
 }
 
+// === API Fetchers ===
+
+/** Fetch EU tariff rate from zolltarifnummern.de (free, no key needed) */
+async function fetchEuTariff(hsCode: string): Promise<{ rate: number; notes?: string } | null> {
+  try {
+    // Try V2 API for classification (returns duty rates for EU)
+    const url = `https://api.zolltarifnummern.de/api/v2/classification/${hsCode}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // The API returns customs duty rate information
+    if (data?.tarif?.dritter_satz) {
+      const rateStr = data.tarif.dritter_satz.replace('%', '').replace(',', '.');
+      const rate = parseFloat(rateStr) / 100;
+      if (!isNaN(rate)) return { rate, notes: data.tarif.warenbenennung || '' };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch exchange rate for CNY from free API */
+async function fetchExchangeRates(): Promise<{ cny: number; eur: number } | null> {
+  try {
+    const res = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=CNY,EUR', {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.rates) {
+      return { cny: data.rates.CNY || 7.2, eur: data.rates.EUR || 0.92 };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Search USITC for an HS code's tariff rate */
+async function fetchUsTariff(hsCode: string): Promise<{ rate: number; section301?: number } | null> {
+  try {
+    const clean = hsCode.replace(/\D/g, '').slice(0, 6);
+    // USITC search API — free and public
+    const url = `https://hts.usitc.gov/rest/search/${clean}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Parse the response for general duty rate
+    if (data?.hits?.hits?.[0]?._source) {
+      const src = data.hits.hits[0]._source;
+      const rateGeneral = src.rate_general || 0;
+      const rateSpecial = src.rate_special || 0;
+      return { rate: rateGeneral, section301: rateSpecial };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Try to fetch China customs tariff rate (scrapes singlewindow.cn public data) */
+async function fetchChinaTariff(hsCode: string): Promise<{ mfnRate: number; rebateRate?: number } | null> {
+  try {
+    const clean = hsCode.replace(/\D/g, '').slice(0, 6);
+    // Use public China customs HS code query interface
+    const url = `https://www.singlewindow.cn/api/hs/search?hsCode=${clean}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.data) {
+      const mfnRate = parseFloat(String(data.data.mfnRate || 0)) / 100;
+      const rebateRate = data.data.rebateRate ? parseFloat(String(data.data.rebateRate)) : undefined;
+      return { mfnRate: isNaN(mfnRate) ? 0 : mfnRate, rebateRate };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Save fetched rate into the cache */
+function saveFetchedRate(code6: string, rates: { usRate: number; euRate: number; section301: number }, source: string) {
+  const cache = readJson<CacheData>(CACHE_FILE, { overrides: [], fetched: [] });
+  const existing = cache.fetched.findIndex((f) => f.code6 === code6);
+  const entry = { code6, ...rates, source };
+  if (existing >= 0) cache.fetched[existing] = entry;
+  else cache.fetched.push(entry);
+  writeJson(CACHE_FILE, cache);
+}
+
+/** List of high-traffic HS6 codes to keep fresh */
+const PRIORITY_HS_CODES = [
+  '851830', '851762', '847130', '620462', '640399', '950300',
+  '420222', '611020', '852871', '841451', '392690', '732393',
+  '940360', '711719', '910111', '330499', '848180', '854442',
+  '621210', '950691', '640419', '620520', '851712', '950450',
+];
+
 /**
- * Refresh tariff data from external sources (or simulation).
- * In production, this would make HTTP requests to official tariff APIs.
- * Currently simulates a successful check with zero changes.
+ * Refresh tariff data from external sources.
+ * Fetches real rates from free public APIs for the most common HS codes.
  */
 export async function refreshTariffData(): Promise<{
   success: boolean;
@@ -163,38 +268,75 @@ export async function refreshTariffData(): Promise<{
   const errors: string[] = [];
   let updated = 0;
 
-  // Try each enabled data source
-  for (const source of DATA_SOURCES) {
-    if (!source.enabled) continue;
+  // 1. Fetch exchange rates
+  try {
+    const fx = await fetchExchangeRates();
+    if (fx) {
+      console.log(`[tariff-updater] Exchange rates: USD/CNY=${fx.cny}, USD/EUR=${fx.eur}`);
+      updated++;
+    }
+  } catch (err) {
+    errors.push(`Exchange rate: ${err instanceof Error ? err.message : 'failed'}`);
+  }
+
+  // 2. Fetch tariff rates for priority HS codes
+  let euFetched = 0;
+  let usFetched = 0;
+
+  for (const code6 of PRIORITY_HS_CODES) {
     try {
-      // Placeholder for actual HTTP fetching
-      // const response = await fetch(source.url);
-      // const data = await processResponse(response, source.country);
-      // saveFetchedRates(data, source.name);
-      // updated += data.length;
-      errors.push(`${source.name}: API not yet integrated — 模拟通过`);
-    } catch (err) {
-      errors.push(`${source.name}: ${err instanceof Error ? err.message : 'unknown error'}`);
+      // Fetch EU rate
+      const euRate = await fetchEuTariff(code6);
+      if (euRate !== null) {
+        const cleanCode = code6.padEnd(6, '0');
+        saveFetchedRate(cleanCode, {
+          usRate: -1, // filled below
+          euRate: euRate.rate,
+          section301: -1,
+        }, `zolltarifnummern.de (${new Date().toISOString().slice(0, 10)})`);
+        euFetched++;
+        updated++;
+        // Small delay to avoid rate limiting
+        await new Promise((r) => setTimeout(r, 200));
+      }
+
+      // Fetch US rate
+      const usRate = await fetchUsTariff(code6);
+      if (usRate !== null) {
+        const cleanCode = code6.padEnd(6, '0');
+        saveFetchedRate(cleanCode, {
+          usRate: usRate.rate,
+          euRate: -1,
+          section301: usRate.section301 ?? -1,
+        }, `USITC (${new Date().toISOString().slice(0, 10)})`);
+        usFetched++;
+        updated++;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    } catch {
+      // individual code failure is OK
     }
   }
 
-  // Update meta
+  console.log(`[tariff-updater] Fetched ${euFetched} EU rates, ${usFetched} US rates`);
+
+  // 3. Update meta
   const meta = readJson<Partial<TariffMeta>>(META_FILE, {});
   const now = new Date().toISOString();
-  const nextCheck = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const nextCheck = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
   writeJson(META_FILE, {
     ...meta,
     lastChecked: now,
     lastUpdated: meta.lastUpdated || now,
     nextScheduledCheck: nextCheck,
-    status: updated > 0 ? 'up-to-date' : 'up-to-date',
+    status: updated > 0 ? 'up-to-date' : 'stale',
     source: updated > 0 ? 'external+static' : 'static',
     version: meta.version || '1.0.0',
   });
 
   return {
-    success: errors.length === 0 || errors.every((e) => e.includes('模拟')),
-    updated,
+    success: updated > 0,
+    updated: euFetched + usFetched,
     errors,
     source: updated > 0 ? 'external' : 'static',
   };
