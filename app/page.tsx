@@ -579,6 +579,29 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
             `${t('pdf.estimated_duty')}: €${report.eu.estimatedDuty.toFixed(2)} | ${t('pdf.estimated_vat')}: €${report.eu.estimatedVat.toFixed(2)}`]} />
       </div>
 
+      {/* Tariff rate visualization — simple bar chart */}
+      <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
+        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-4">
+          {t('report.us_tariff')} vs {t('report.eu_tariff')}
+        </h3>
+        <div className="flex items-end gap-4 h-28">
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[10px] text-white/30">US</span>
+            <div className="w-full bg-cyan-500/20 rounded-t-sm" style={{ height: `${Math.min(report.us.estimatedDuty * 4, 80)}px` }}>
+              <div className="w-full h-full bg-gradient-to-t from-cyan-500 to-cyan-400 rounded-t-sm opacity-80" style={{ height: `${Math.min(report.us.estimatedDuty / (report.us.estimatedDuty + report.eu.totalEu || 1) * 100, 100)}%` }} />
+            </div>
+            <span className="text-xs font-mono text-white/60">${report.us.estimatedDuty.toFixed(2)}</span>
+          </div>
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <span className="text-[10px] text-white-30">EU</span>
+            <div className="w-full bg-purple-500/20 rounded-t-sm" style={{ height: `${Math.min(report.eu.totalEu * 4, 80)}px` }}>
+              <div className="w-full h-full bg-gradient-to-t from-purple-500 to-purple-400 rounded-t-sm opacity-80" style={{ height: `${Math.min(report.eu.totalEu / (report.us.estimatedDuty + report.eu.totalEu || 1) * 100, 100)}%` }} />
+            </div>
+            <span className="text-xs font-mono text-white/60">€{report.eu.totalEu.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Multi-country comparison */}
       {report.countryComparison && report.countryComparison.length > 0 && (
         <div className="p-5 rounded-xl bg-white/[0.02] border border-white/10">
@@ -1152,39 +1175,73 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Hero Section */}
-        <section className="relative overflow-hidden rounded-2xl mb-12 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-purple-500/10 border border-white/5">
+        {/* Hero Section — business style with global trade illustration */}
+        <section className="relative overflow-hidden rounded-2xl mb-12 bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-purple-500/10 border border-white/5 min-h-[360px] sm:min-h-[440px] flex items-center">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.15),transparent_50%)]" />
-          <div className="relative px-8 py-14 sm:px-14 sm:py-20 text-center">
-            <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] text-cyan-300/70 mb-5 font-medium tracking-wider uppercase">
-              {t('hero.badge')}
-            </span>
-            <h1 className="text-3xl sm:text-5xl font-bold leading-tight text-white/90 max-w-2xl mx-auto">
-              {t('hero.title')}
-            </h1>
-            <p className="mt-4 text-sm sm:text-base text-white/40 max-w-xl mx-auto leading-relaxed">
-              {t('hero.subtitle')}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <button onClick={openCamera}
-                className="px-8 py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform cursor-pointer touch-manipulation">
-                {t('hero.cta')}
-              </button>
-            </div>
-            <div className="mt-10 flex items-center justify-center gap-8 text-xs">
-              <div className="text-center">
-                <p className="text-lg font-bold text-white/70">5000+</p>
-                <p className="text-white/30">{t('hero.stats_products')}</p>
+          {/* Global trade illustration — right side on desktop, bottom on mobile */}
+          <div className="absolute right-0 bottom-0 w-1/2 h-full opacity-20 sm:opacity-40 pointer-events-none hidden sm:block">
+            <svg viewBox="0 0 400 400" className="w-full h-full" fill="none">
+              {/* Globe outline */}
+              <circle cx="200" cy="200" r="140" stroke="url(#heroGrad)" strokeWidth="1.5" opacity="0.6"/>
+              <ellipse cx="200" cy="200" rx="140" ry="50" stroke="url(#heroGrad)" strokeWidth="0.8" opacity="0.3"/>
+              <ellipse cx="200" cy="200" rx="50" ry="140" stroke="url(#heroGrad)" strokeWidth="0.8" opacity="0.3"/>
+              <ellipse cx="200" cy="200" rx="120" ry="40" stroke="url(#heroGrad)" strokeWidth="0.5" opacity="0.2"/>
+              {/* Continents (abstract shapes) */}
+              <path d="M140 140 Q170 120 200 140 Q220 160 200 190 Q170 200 140 170 Z" fill="url(#heroGrad)" opacity="0.3"/>
+              <path d="M230 160 Q270 150 280 180 Q290 210 260 220 Q230 210 230 180 Z" fill="url(#heroGrad)" opacity="0.25"/>
+              <path d="M170 230 Q200 210 220 240 Q230 270 200 280 Q170 270 170 240 Z" fill="url(#heroGrad)" opacity="0.2"/>
+              {/* Trade routes */}
+              <path d="M160 150 Q200 120 250 170" stroke="#22d3ee" strokeWidth="0.8" opacity="0.3" strokeDasharray="3 3"/>
+              <path d="M180 250 Q230 230 270 260" stroke="#22d3ee" strokeWidth="0.8" opacity="0.3" strokeDasharray="3 3"/>
+              <path d="M120 200 Q200 170 280 210" stroke="#22d3ee" strokeWidth="0.8" opacity="0.3" strokeDasharray="3 3"/>
+              <circle cx="160" cy="150" r="3" fill="#22d3ee" opacity="0.4"/>
+              <circle cx="250" cy="170" r="3" fill="#06b6d4" opacity="0.4"/>
+              <circle cx="180" cy="250" r="3" fill="#22d3ee" opacity="0.4"/>
+              <circle cx="270" cy="260" r="3" fill="#06b6d4" opacity="0.4"/>
+              <defs><linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#22d3ee"/><stop offset="100%" stopColor="#3b82f6"/></linearGradient></defs>
+            </svg>
+          </div>
+          {/* Mobile illustration (simpler, smaller) */}
+          <div className="absolute right-2 top-2 w-20 h-20 sm:hidden pointer-events-none opacity-30">
+            <svg viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="35" stroke="#22d3ee" strokeWidth="1" opacity="0.5"/>
+              <path d="M35 35 Q50 25 65 40 Q70 55 55 60 Q40 60 35 45 Z" fill="#22d3ee" opacity="0.3"/>
+              <path d="M55 55 Q65 45 75 55 Q80 65 70 70 Q60 70 55 60 Z" fill="#06b6d4" opacity="0.2"/>
+              <path d="M30 65 Q45 55 55 70" stroke="#22d3ee" strokeWidth="0.5" opacity="0.3" strokeDasharray="2 2"/>
+            </svg>
+          </div>
+          <div className="relative w-full px-6 py-10 sm:px-14 sm:py-20">
+            <div className="max-w-xl">
+              <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] text-cyan-300/70 mb-4 font-medium tracking-wider uppercase">
+                {t('hero.badge')}
+              </span>
+              <h1 className="text-2xl sm:text-5xl font-bold leading-tight text-white/90">
+                {t('hero.title')}
+              </h1>
+              <p className="mt-3 text-sm sm:text-base text-white/40 leading-relaxed max-w-lg">
+                {t('hero.subtitle')}
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button onClick={openCamera}
+                  className="px-6 py-2.5 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/20 active:scale-95 cursor-pointer touch-manipulation">
+                  {t('hero.cta')}
+                </button>
               </div>
-              <div className="w-px h-8 bg-white/10" />
-              <div className="text-center">
-                <p className="text-lg font-bold text-white/70">{t('hero.stats_accuracy')}</p>
-                <p className="text-white/30">{t('hero.stats_accuracy_sub')}</p>
-              </div>
-              <div className="w-px h-8 bg-white/10" />
-              <div className="text-center">
-                <p className="text-lg font-bold text-white/70">&lt;10s</p>
-                <p className="text-white/30">{t('hero.stats_seconds')}</p>
+              <div className="mt-8 flex items-center gap-6 text-xs">
+                <div className="text-center">
+                  <p className="text-lg font-bold text-white/70">5000+</p>
+                  <p className="text-white/30">{t('hero.stats_products')}</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-lg font-bold text-white/70">{t('hero.stats_accuracy')}</p>
+                  <p className="text-white/30">{t('hero.stats_accuracy_sub')}</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="text-lg font-bold text-white/70">&lt;10s</p>
+                  <p className="text-white/30">{t('hero.stats_seconds')}</p>
+                </div>
               </div>
             </div>
           </div>
