@@ -1142,8 +1142,8 @@ export default function Home() {
         <section className="mb-8 text-center">
           <div className="flex flex-wrap items-center justify-center gap-3">
             {[
-              t('platform.temu'), t('platform.tiktok'), t('platform.amazon'),
-              t('platform.shopify'), t('platform.walmart'),
+              'Temu', 'TikTok Shop', 'Amazon FBA', 'Shopify', 'Walmart',
+              'AliExpress', 'SHEIN', 'eBay', 'Etsy', 'Lazada', 'Shopee',
             ].map((name) => (
               <span key={name} className="px-4 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-xs text-white/40 hover:text-white/60 hover:border-white/20 transition-colors">
                 {name}
@@ -1206,12 +1206,17 @@ export default function Home() {
         <h2 className="hidden sm:block text-center text-sm font-semibold text-white/40 uppercase tracking-wider mb-8">{t('how.title')}</h2>
         <div className={`grid sm:grid-cols-3 gap-4 ${showHow ? '' : 'hidden sm:grid'}`}>
           {[
-            { icon: '📸', title: t('how.step1.title'), desc: t('how.step1.desc') },
-            { icon: '🤖', title: t('how.step2.title'), desc: t('how.step2.desc') },
-            { icon: '📊', title: t('how.step3.title'), desc: t('how.step3.desc') },
+            { icon: 'camera', title: t('how.step1.title'), desc: t('how.step1.desc') },
+            { icon: 'robot', title: t('how.step2.title'), desc: t('how.step2.desc') },
+            { icon: 'chart', title: t('how.step3.title'), desc: t('how.step3.desc') },
           ].map((step, i) => (
             <div key={i} className="p-6 rounded-xl bg-white/[0.02] border border-white/10 text-center hover:border-cyan-500/20 transition-colors group">
-              <span className="text-3xl mb-3 block">{step.icon}</span>
+              <span className="mb-3 block flex justify-center">{step.icon === 'camera' ?
+                <svg className="w-8 h-8 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> :
+               step.icon === 'robot' ?
+                <svg className="w-8 h-8 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="9" cy="16" r="1"/><circle cx="15" cy="16" r="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><line x1="12" y1="7" x2="12" y2="11"/></svg> :
+                <svg className="w-8 h-8 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              }</span>
               <h3 className="text-sm font-semibold text-white/70 mb-2">{step.title}</h3>
               <p className="text-xs text-white/30 leading-relaxed">{step.desc}</p>
             </div>
@@ -1235,13 +1240,20 @@ export default function Home() {
         <h2 className="hidden sm:block text-center text-sm font-semibold text-white/40 uppercase tracking-wider mb-8">{t('feature.title')}</h2>
         <div className={`grid sm:grid-cols-2 gap-4 ${showFeatures ? '' : 'hidden sm:grid'}`}>
           {[
-            { icon: '🔍', title: t('feature.hs.title'), desc: t('feature.hs.desc') },
-            { icon: '💰', title: t('feature.tariff.title'), desc: t('feature.tariff.desc') },
-            { icon: '📈', title: t('feature.profit.title'), desc: t('feature.profit.desc') },
-            { icon: '🛡️', title: t('feature.compliance.title'), desc: t('feature.compliance.desc') },
+            { icon: 'search', title: t('feature.hs.title'), desc: t('feature.hs.desc') },
+            { icon: 'dollar', title: t('feature.tariff.title'), desc: t('feature.tariff.desc') },
+            { icon: 'trend', title: t('feature.profit.title'), desc: t('feature.profit.desc') },
+            { icon: 'shield', title: t('feature.compliance.title'), desc: t('feature.compliance.desc') },
           ].map((feat, i) => (
             <div key={i} className="p-5 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-colors">
-              <span className="text-xl mb-2 block">{feat.icon}</span>
+              <span className="mb-2 block">{feat.icon === 'search' ?
+                <svg className="w-6 h-6 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> :
+               feat.icon === 'dollar' ?
+                <svg className="w-6 h-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> :
+               feat.icon === 'trend' ?
+                <svg className="w-6 h-6 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> :
+                <svg className="w-6 h-6 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              }</span>
               <h3 className="text-sm font-semibold text-white/70 mb-1">{feat.title}</h3>
               <p className="text-xs text-white/30 leading-relaxed">{feat.desc}</p>
             </div>
@@ -1371,6 +1383,24 @@ export default function Home() {
                   declaredValue === 50 && shippingCost === 10 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
                 }`}>
                 {t('scene.d2c')}
+              </button>
+              <button type="button" onClick={() => { setDeclaredValue(8); setShippingCost(5); setPlatform('aliexpress'); }}
+                className={`px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg border text-xs sm:text-[10px] transition-colors ${
+                  declaredValue === 8 && shippingCost === 5 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
+                }`}>
+                AliExpress
+              </button>
+              <button type="button" onClick={() => { setDeclaredValue(20); setShippingCost(7); setPlatform('shein'); }}
+                className={`px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg border text-xs sm:text-[10px] transition-colors ${
+                  declaredValue === 20 && shippingCost === 7 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
+                }`}>
+                SHEIN
+              </button>
+              <button type="button" onClick={() => { setDeclaredValue(30); setShippingCost(8); setPlatform('amazon'); }}
+                className={`px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg border text-xs sm:text-[10px] transition-colors ${
+                  declaredValue === 30 && shippingCost === 8 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'border-white/10 text-white/30 hover:border-white/20'
+                }`}>
+                Amazon FBA
               </button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
