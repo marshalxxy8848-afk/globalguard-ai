@@ -1045,17 +1045,11 @@ export default function Home() {
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }, []);
 
   function openCamera() {
-    const el = camRef.current;
-    if (!el) return;
-    // On desktop: scroll to upload zone instead of opening file picker
-    if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      camRef.current?.click();
+    } else {
       document.getElementById('upload-zone')?.scrollIntoView({ behavior: 'smooth' });
-      return;
     }
-    // On mobile: set capture dynamically and trigger native camera
-    el.removeAttribute('capture');
-    el.setAttribute('capture', 'environment');
-    el.click();
   }
 
   const isBusy = status === 'uploading' || status === 'analyzing';
@@ -1246,7 +1240,7 @@ export default function Home() {
             className="hidden"
             onChange={(e) => e.target.files && handleFiles(e.target.files)}
           />
-          <input ref={camRef} type="file" accept="image/*,android/allowCamera" className="hidden"
+          <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
             onChange={(e) => { e.target.files && handleFiles(e.target.files); }} />
 
           {previews.length > 0 ? (
