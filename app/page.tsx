@@ -391,11 +391,18 @@ function HsCodeEditor({ code, suggestions, onChange }: {
       <div className="flex flex-wrap gap-2 mb-2">
         {suggestions.map((s) => (
           <button key={s.code} onClick={() => handleSelect(s.code)}
-            className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs border transition-colors text-left ${
               s.code === code ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'bg-white/[0.03] border-white/10 text-white/50 hover:border-white/20'
             }`}
           >
-            {s.code}<br/><span className="text-[10px] opacity-60">{s.reason}</span>
+            <span className="font-mono">{s.code}</span>
+            <span className={`ml-1.5 inline-block px-1 py-0.5 rounded text-[9px] font-medium ${
+              s.confidence >= 0.7 ? 'bg-green-500/20 text-green-400' :
+              s.confidence >= 0.4 ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'
+            }`}>
+              {Math.round(s.confidence * 100)}%
+            </span>
+            <br/><span className="text-[10px] opacity-60">{s.reason}</span>
           </button>
         ))}
       </div>
@@ -525,6 +532,20 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
             <p>{t('report.hs_code')}: <span className="text-white/60">{report.selectedHsCode}</span></p>
           )}
           <p>{t('report.description')}: <span className="text-white/60">{report.hsDescription}</span></p>
+          {/* HS code hierarchy — adds trust via transparency */}
+          <div className="flex flex-wrap gap-1 mt-2">
+            <span className="px-1.5 py-0.5 rounded bg-white/[0.04] text-[9px] text-white/30 font-mono">
+              章 {report.selectedHsCode.slice(0, 2)}
+            </span>
+            <span className="text-white/10">→</span>
+            <span className="px-1.5 py-0.5 rounded bg-white/[0.04] text-[9px] text-white/30 font-mono">
+              品目 {report.selectedHsCode.slice(0, 4)}
+            </span>
+            <span className="text-white/10">→</span>
+            <span className="px-1.5 py-0.5 rounded bg-cyan-500/10 text-[9px] text-cyan-300/70 font-mono">
+              子目 {report.selectedHsCode.slice(0, 6)}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1441,6 +1462,8 @@ export default function Home() {
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-white/40 mb-4">
               <LoadingDots /> {t('loading.agents')}
+              <span className="text-white/20 mx-1">·</span>
+              <span className="text-cyan-400/50">&lt;10s</span>
             </div>
             <div className="grid grid-cols-3 gap-3 max-w-md mx-auto mt-6">
               {[
