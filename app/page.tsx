@@ -528,6 +528,22 @@ function AuditReportView({ report, demoMode, demoReason, suggestedCodes, onHsCod
         </div>
       </div>
 
+      {/* Data source trust badges */}
+      <div className="flex flex-wrap items-center gap-2 text-[10px] text-white/25 mb-4">
+        <span className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] border border-white/5">
+          <svg className="w-3 h-3 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          {report.dataSource}
+        </span>
+        <span className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] border border-white/5">
+          <svg className="w-3 h-3 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          {t('badge.updated', { date: report.dataUpdated })}
+        </span>
+      </div>
+
       {/* Tariff cards */}
       <div className="grid sm:grid-cols-2 gap-4">
         <TariffCard label={t('report.us_tariff')} currency="$" amount={report.us.estimatedDuty}
@@ -1077,8 +1093,32 @@ export default function Home() {
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-10">
 
-        {/* Platform Badges — moved to very top */}
-        <section className="mb-10 text-center">
+        {/* Trust badges — data sources */}
+        <section className="mb-6 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px]">
+            <span className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] border border-white/5 text-white/30">
+              <svg className="w-3 h-3 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              USITC · EU TARIC
+            </span>
+            <span className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] border border-white/5 text-white/30">
+              <svg className="w-3 h-3 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {t('badge.updated', { date: '2026-05' })}
+            </span>
+            <span className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.03] border border-white/5 text-white/30">
+              <svg className="w-3 h-3 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <polyline points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              {t('badge.ai_powered')}
+            </span>
+          </div>
+        </section>
+
+        {/* Platform Badges */}
+        <section className="mb-8 text-center">
           <div className="flex flex-wrap items-center justify-center gap-3">
             {[
               t('platform.temu'), t('platform.tiktok'), t('platform.amazon'),
