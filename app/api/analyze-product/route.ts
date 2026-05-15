@@ -5,6 +5,7 @@ import { classifyProduct } from '@/lib/hs-classifier';
 import { generateAuditReport } from '@/lib/audit';
 import { getAuthUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -54,6 +55,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No image data provided' }, { status: 400 });
     }
 
+    // Rate limit check
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const user = await getAuthUser().catch(() => null);
+    const { allowed, remaining, limit } = checkRateLimit(ip, user?.userId);
+    if (!allowed) {
+      return NextResponse.json({
+        error: `Daily usage limit reached (${limit}/day). Please try again tomorrow or sign up for more.`,
+        quota: { remaining, limit },
+      }, { status: 429 });
+    }
+
     const visionResult = await analyzeImage(imageBase64, productDescription);
 
     // Search local DB with external fallback (USITC API → web scrape → mock)
@@ -98,9 +110,8 @@ export async function POST(request: NextRequest) {
     );
 
     // Auto-save to audit history if user is logged in
-    try {
-      const user = await getAuthUser();
-      if (user) {
+    if (user) {
+      try {
         await db.createAuditRecord({
           userId: user.userId,
           productName: audit.productName,
@@ -108,9 +119,9 @@ export async function POST(request: NextRequest) {
           riskLevel: audit.overallRisk,
           report: JSON.stringify(audit),
         });
+      } catch (dbErr) {
+        console.warn('[analyze-product] failed to save audit record:', dbErr);
       }
-    } catch (dbErr) {
-      console.warn('[analyze-product] failed to save audit record:', dbErr);
     }
 
     return NextResponse.json({
