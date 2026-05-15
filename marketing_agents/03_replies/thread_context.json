@@ -1,0 +1,16 @@
+{
+  "https://reddit.com/r/ecommerce/1": {
+    "title": "Import tariffs from China to US are killing my margins",
+    "replies": [
+      "Have you looked into the de minimis exemption? Under $800 can enter duty-free.",
+      "Check if your products qualify for any exclusions or tariff classifications."
+    ]
+  },
+  "https://zhihu.com/question/1": {
+    "title": "HS编码查不准确怎么办？",
+    "replies": [
+      "建议用海关官方的归类查询系统，虽然操作麻烦但最准确。",
+      "找报关行帮忙归类，他们比较有经验。"
+    ]
+  }
+}

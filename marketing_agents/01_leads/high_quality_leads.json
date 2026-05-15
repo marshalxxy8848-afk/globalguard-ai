@@ -1,0 +1,34 @@
+[
+  {
+    "url": "https://zhihu.com/q/1",
+    "author": "跨境小王",
+    "pain_point": "HS编码归类不准确导致清关受阻和额外关税",
+    "region": "中国卖家",
+    "original_text": "HS编码查不准确怎么办？ 发了一批货到美国，海关说HS编码归错了，要多交30%关税。蓝牙耳机，有没有靠谱查编码方法？",
+    "platform": "zhihu"
+  },
+  {
+    "url": "https://zhihu.com/q/2",
+    "author": "外贸小张",
+    "pain_point": "不清楚欧盟关税和VAT的计算方法，需要一键计算工具",
+    "region": "中国卖家",
+    "original_text": "欧盟关税怎么算？VAT和关税的区别 刚做欧洲站，搞不清楚欧盟关税和VAT怎么算，有没有工具能一键算出来？",
+    "platform": "zhihu"
+  },
+  {
+    "url": "https://reddit.com/r/ecommerce/1",
+    "author": "ecom_newbie",
+    "pain_point": "需要正确的HS编码以最小化301关税对利润的影响",
+    "region": "欧美卖家",
+    "original_text": "Import tariffs from China are killing my margins Dropshipping from China and 301 tariffs destroying margins. Need correct HS codes to minimize duties.",
+    "platform": "reddit"
+  },
+  {
+    "url": "https://reddit.com/r/FulfillmentByAmazon/2",
+    "author": "amz_seller_2024",
+    "pain_point": "HS编码分类困难，需要查找工具",
+    "region": "欧美卖家",
+    "original_text": "Best HS code lookup tool? Moving from eBay to Amazon FBA. Struggling with HS code classification. What tools do you use?",
+    "platform": "reddit"
+  }
+]
