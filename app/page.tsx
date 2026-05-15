@@ -1105,11 +1105,15 @@ export default function Home() {
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }, []);
 
   function openCamera() {
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-      camRef.current?.click();
-    } else {
+    const el = camRef.current;
+    if (!el) return;
+    // Always try to trigger camera/file picker
+    // On desktop without touch, scroll to upload zone
+    if (!('ontouchstart' in window) && !navigator.maxTouchPoints) {
       document.getElementById('upload-zone')?.scrollIntoView({ behavior: 'smooth' });
+      return;
     }
+    el.click();
   }
 
   const isBusy = status === 'uploading' || status === 'analyzing';
