@@ -48,6 +48,13 @@ dev.db
 
 # marketing agent generated output (daily changing files)
 marketing_agents/reports/
+marketing_agents/**/high_quality_leads.json
+marketing_agents/**/ready_to_send_replies.json
+marketing_agents/**/onboarding_messages.json
+marketing_agents/**/trending_structures.json
+marketing_agents/**/thread_context.json
+marketing_agents/**/*.md
+marketing_agents/**/*.txt
 
 certificates
 .vercel
