@@ -46,5 +46,8 @@ next-env.d.ts
 # local dev database (SQLite — not used on Vercel/Postgres)
 dev.db
 
+# marketing agent generated output (daily changing files)
+marketing_agents/reports/
+
 certificates
 .vercel
