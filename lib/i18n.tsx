@@ -11,6 +11,12 @@ const ZH_CN: Dict = {
   'app.subtitle': '上传产品照片，AI 自动完成 HS 编码分类与关税分析',
 
   // Trust badges
+  'subscribe.title': '获取每周关税政策更新',
+  'subscribe.subtitle': '加入 500+ 跨境卖家，每周免费获取最新HS编码变动提醒',
+  'subscribe.placeholder': '输入你的邮箱',
+  'subscribe.cta': '免费订阅',
+  'subscribe.thanks': '感谢订阅！首份报告将发送到你的邮箱',
+
   'badge.data_source': '数据来源: USITC · EU TARIC',
   'badge.ai_powered': 'AI 识别 · 秒出结果',
   'badge.updated': '数据库更新于 {date}',
@@ -272,6 +278,12 @@ const ZH_CN: Dict = {
 const EN_US: Dict = {
   'app.title': 'Cross-Border Compliance Audit',
   'app.subtitle': 'Upload product photos for AI-powered HS classification & tariff analysis',
+  'subscribe.title': 'Get Weekly Tariff Updates',
+  'subscribe.subtitle': 'Join 500+ cross-border sellers. Free HS code alerts every week.',
+  'subscribe.placeholder': 'Enter your email',
+  'subscribe.cta': 'Subscribe Free',
+  'subscribe.thanks': 'Thanks! Your first report is on the way.',
+
   'badge.data_source': 'Data: USITC · EU TARIC',
   'badge.ai_powered': 'AI Recognition · Instant Results',
   'badge.updated': 'Database updated {date}',
