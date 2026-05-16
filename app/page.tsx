@@ -10,6 +10,7 @@ import { useLocale } from '@/lib/i18n';
 import { generateAuditReport, PLATFORM_FEES } from '@/lib/audit';
 import { EU_VAT_RATES } from '@/lib/eu-vat';
 import { checkSensitiveItem } from '@/lib/sensitive-items';
+import EmailSubscribe from '@/components/EmailSubscribe';
 
 // --- Constants ---
 const API_PATHS = { analyze: '/api/analyze-product' } as const;
@@ -1100,24 +1101,9 @@ export default function Home() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showHow, setShowHow] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
-  const [subscribeEmail, setSubscribeEmail] = useState('');
-  const [subscribeStatus, setSubscribeStatus] = useState<'idle' | 'loading' | 'done'>('idle');
   const camRef = useRef<HTMLInputElement>(null);
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }, []);
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }, []);
-
-  function handleSubscribe() {
-    if (!subscribeEmail) return;
-    setSubscribeStatus('loading');
-    try {
-      const existing = JSON.parse(localStorage.getItem('globalguard_subscribers') || '[]');
-      if (!existing.includes(subscribeEmail)) {
-        existing.push(subscribeEmail);
-        localStorage.setItem('globalguard_subscribers', JSON.stringify(existing));
-      }
-    } catch { /* ignore */ }
-    setTimeout(() => setSubscribeStatus('done'), 500);
-  }
 
   function openCamera() {
     const el = camRef.current;
@@ -1263,28 +1249,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Email subscription */}
-              <div className="mt-8 p-4 rounded-xl bg-white/[0.02] border border-white/5 max-w-md">
-                <p className="text-sm font-semibold text-white/70">{t('subscribe.title')}</p>
-                <p className="text-[11px] text-white/30 mt-1">{t('subscribe.subtitle')}</p>
-                {subscribeStatus === 'done' ? (
-                  <p className="mt-3 text-xs text-emerald-400">{t('subscribe.thanks')}</p>
-                ) : (
-                  <div className="mt-3 flex gap-2">
-                    <input type="email" value={subscribeEmail}
-                      onChange={(e) => setSubscribeEmail(e.target.value)}
-                      placeholder={t('subscribe.placeholder')}
-                      className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-white/60 placeholder-white/20 outline-none focus:border-cyan-500/30"
-                    />
-                    <button onClick={handleSubscribe}
-                      disabled={!subscribeEmail || subscribeStatus === 'loading'}
-                      className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-xs font-semibold hover:bg-cyan-400 transition-colors disabled:opacity-40 cursor-pointer shrink-0"
-                    >
-                      {subscribeStatus === 'loading' ? '...' : t('subscribe.cta')}
-                    </button>
-                  </div>
-                )}
-              </div>
+              <EmailSubscribe />
 
             </div>
           </div>
