@@ -1,60 +1,69 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-const STORAGE_KEY = 'subscribers';
-
-interface Subscriber {
-  email: string;
-  timestamp: string;
-}
-
-function getSubscribers(): Subscriber[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function saveSubscriber(email: string): boolean {
-  const list = getSubscribers();
-  if (list.some((s) => s.email === email)) return false; // already exists
-  list.push({ email, timestamp: new Date().toISOString() });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  return true;
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+);
 
 export default function EmailSubscribe() {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'done' | 'duplicate' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'duplicate' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Detect user language from the page
+  function detectLang(): string {
+    if (typeof window === 'undefined') return 'zh-CN';
+    try {
+      const html = document.documentElement.lang;
+      if (html) return html;
+    } catch {}
+    return navigator.language || 'zh-CN';
+  }
 
   function validate(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!email.trim()) {
-      setErrorMsg('请输入有效邮箱');
-      return;
-    }
-    if (!validate(email.trim())) {
+    const val = email.trim();
+    if (!val || !validate(val)) {
       setErrorMsg('请输入有效邮箱');
       return;
     }
 
-    const saved = saveSubscriber(email.trim());
-    if (!saved) {
-      setStatus('duplicate');
-    } else {
+    setStatus('loading');
+
+    try {
+      const { error } = await supabase.from('subscribers').insert({
+        email: val,
+        lang: detectLang(),
+      });
+
+      if (error) {
+        // code 23505 = duplicate key (unique constraint on email)
+        if (error.code === '23505') {
+          setStatus('duplicate');
+        } else {
+          console.error('[subscribe]', error);
+          setErrorMsg('提交失败，请稍后重试');
+          setStatus('error');
+        }
+        return;
+      }
+
       setStatus('done');
+    } catch (err) {
+      console.error('[subscribe]', err);
+      setErrorMsg('网络错误，请稍后重试');
+      setStatus('error');
     }
   }
 
@@ -87,10 +96,11 @@ export default function EmailSubscribe() {
             />
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:brightness-110 shrink-0"
+              disabled={status === 'loading'}
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:brightness-110 shrink-0 disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}
             >
-              免费订阅
+              {status === 'loading' ? '提交中...' : '免费订阅'}
             </button>
           </form>
           {errorMsg && <p className="mt-2 text-xs text-red-400">{errorMsg}</p>}
